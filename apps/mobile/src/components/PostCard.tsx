@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActionSheetIOS, Alert, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { ActionSheetIOS, Alert, Platform, StyleSheet, View } from 'react-native';
 
 import { createReply } from '@/lib/api';
 import {
@@ -13,6 +13,7 @@ import {
   type ReplyWithAuthor,
 } from '@/lib/community';
 import { isQuietHours, plural, timeAgo } from '@/lib/format';
+import { commitHaptic } from '@/lib/haptics';
 import { fonts, radius, TAP, useTheme } from '@/lib/theme';
 import type { ReactionKind } from '@/lib/types';
 
@@ -21,6 +22,7 @@ import { Button } from './Button';
 import { Card } from './Card';
 import { Field } from './Field';
 import { Icon, type IconName } from './Icon';
+import { PressableScale } from './PressableScale';
 import { Txt } from './Txt';
 
 const REACTION_ICON: Record<ReactionKind, { on: IconName; off: IconName }> = {
@@ -79,6 +81,7 @@ export function PostCard({ post, userId, onChange, onBlocked, compact }: Props) 
       reactions: { ...post.reactions, [kind]: Math.max(0, post.reactions[kind] + (on ? 1 : -1)) },
     };
     onChange(optimistic);
+    commitHaptic();
     try {
       await setReaction(post.id, userId, kind, on);
     } catch {
@@ -107,6 +110,7 @@ export function PostCard({ post, userId, onChange, onBlocked, compact }: Props) 
     try {
       const res = await createReply({ post_id: post.id, body });
       setDraft('');
+      commitHaptic();
       if (res.status === 'pending') {
         setNotice('Thanks — a mentor checks it before it appears.');
       }
@@ -182,9 +186,9 @@ export function PostCard({ post, userId, onChange, onBlocked, compact }: Props) 
           </Txt>
         </View>
         {!mine ? (
-          <Pressable onPress={more} accessibilityRole="button" accessibilityLabel={`Report or block, post by ${name}`} style={styles.iconBtn}>
+          <PressableScale onPress={more} accessibilityRole="button" accessibilityLabel={`Report or block, post by ${name}`} style={styles.iconBtn}>
             <Icon name="dots-horizontal" color={t.textMuted} />
-          </Pressable>
+          </PressableScale>
         ) : null}
       </View>
 
@@ -206,7 +210,7 @@ export function PostCard({ post, userId, onChange, onBlocked, compact }: Props) 
               const on = post.mine.has(r.kind);
               const count = post.reactions[r.kind];
               return (
-                <Pressable
+                <PressableScale
                   key={r.kind}
                   onPress={() => toggle(r.kind)}
                   accessibilityRole="button"
@@ -221,11 +225,11 @@ export function PostCard({ post, userId, onChange, onBlocked, compact }: Props) 
                   <Txt variant="meta" color={on ? t.accent : t.textMuted} style={{ fontFamily: fonts.bodySemi }}>
                     {r.label} {count > 0 ? count : ''}
                   </Txt>
-                </Pressable>
+                </PressableScale>
               );
             })}
           </View>
-          <Pressable
+          <PressableScale
             onPress={openReplies}
             accessibilityRole="button"
             accessibilityState={{ expanded: open }}
@@ -236,7 +240,7 @@ export function PostCard({ post, userId, onChange, onBlocked, compact }: Props) 
             <Txt variant="label" color={t.accent}>
               {post.replyCount ? plural(post.replyCount, 'reply', 'replies') : 'Reply'}
             </Txt>
-          </Pressable>
+          </PressableScale>
         </>
       ) : null}
 

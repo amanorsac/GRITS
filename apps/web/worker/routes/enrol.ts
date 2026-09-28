@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AppEnv, Env } from '../env';
-import { adminClient, body, escapeHtml, hmacSha512Hex, HttpError, joinCode, requireUser, sendEmail, timingSafeEqual } from '../lib';
+import { emit } from '../integrations';
+import { adminClient, body, escapeHtml, hmacSha512Hex, HttpError, joinCode, priceFor, requireUser, sendEmail, timingSafeEqual } from '../lib';
 
 const enrol = new Hono<AppEnv>();
 
@@ -9,7 +10,7 @@ type EnrolInput = {
   program?: string;
   child_name?: string;
   birth_year?: number;
-  age_band?: '10-12' | '13-15' | '16-18';
+  age_band?: '8-12' | '13-17' | '10-12' | '13-15' | '16-18';
   permissions?: { circle?: boolean; court?: boolean; mentor_dm?: boolean };
   consent_data?: boolean;
   weekly_digest?: boolean;
@@ -43,14 +44,15 @@ enrol.post('/enrol', requireUser('parent'), async (c) => {
 
   const { data: program } = await admin
     .from('programs')
-    .select('id, slug, name, price_pesewas, instalments, is_open')
+    .select('id, slug, name, price_pesewas, instalments, is_open, pro_rata, cohort_start, cohort_end')
     .eq('slug', input.program ?? 'inner-court')
     .single();
   if (!program || !program.is_open) throw new HttpError(404, 'That program is not open for enrolment');
-  if (!program.price_pesewas) throw new HttpError(409, 'The Academy has not published the price yet. Please check back soon.');
+  const total = priceFor(program);
+  if (!total) throw new HttpError(409, 'The Academy has not published the price yet. Please check back soon.');
 
   // Community is off by default under 13; the parent may switch it on.
-  const under13 = input.age_band === '10-12';
+  const under13 = input.age_band === '8-12' || input.age_band === '10-12';
   const permissions = {
     circle: input.permissions?.circle ?? true,
     court: input.permissions?.court ?? !under13,
@@ -59,7 +61,7 @@ enrol.post('/enrol', requireUser('parent'), async (c) => {
 
   const plan = input.plan === 'instalments' && program.instalments > 1 ? 'instalments' : 'full';
   const parts = plan === 'instalments' ? program.instalments : 1;
-  const firstAmount = Math.ceil(program.price_pesewas / parts);
+  const firstAmount = Math.ceil(total / parts);
 
   const { data: enrolment, error: e1 } = await admin
     .from('enrolments')
@@ -94,7 +96,7 @@ enrol.post('/enrol', requireUser('parent'), async (c) => {
   const rows = Array.from({ length: parts }, (_, i) => {
     const due = new Date(now);
     due.setUTCMonth(due.getUTCMonth() + i);
-    const amount = i === parts - 1 ? program.price_pesewas - firstAmount * (parts - 1) : firstAmount;
+    const amount = i === parts - 1 ? total - firstAmount * (parts - 1) : firstAmount;
     return {
       parent_id: parent.id,
       enrolment_id: enrolment.id,
@@ -121,6 +123,9 @@ enrol.post('/enrol', requireUser('parent'), async (c) => {
     }),
   });
 
+  c.executionCtx.waitUntil(
+    emit(c.env, { type: 'enrolment.started', parent_email: user.email ?? parent.email, parent_name: parent.full_name, parent_phone: null, program: program.slug, plan, amount_ghs: total / 100 }),
+  );
   return c.json({ authorization_url: tx.authorization_url, reference, join_code: code });
 });
 
@@ -157,7 +162,7 @@ type PaystackTx = { reference: string; status: string; amount: number; currency:
 async function applySuccess(env: Env, admin: SupabaseClient, tx: PaystackTx) {
   const { data: pay } = await admin
     .from('payments')
-    .select('id, status, amount_pesewas, enrolment_id, parent_id')
+    .select('id, status, amount_pesewas, enrolment_id, parent_id, instalment_no')
     .eq('reference', tx.reference)
     .maybeSingle();
   if (!pay) return { ok: false, reason: 'unknown reference' };
@@ -170,6 +175,10 @@ async function applySuccess(env: Env, admin: SupabaseClient, tx: PaystackTx) {
     .from('payments')
     .update({ status: 'success', channel: tx.channel, paid_at: tx.paid_at ?? new Date().toISOString(), raw: tx })
     .eq('id', pay.id);
+  {
+    const { data: payer } = await admin.from('profiles').select('email').eq('id', pay.parent_id).single();
+    await emit(env, { type: 'payment.succeeded', parent_email: payer?.email ?? null, reference: tx.reference, amount_ghs: tx.amount / 100, channel: tx.channel, instalment_no: pay.instalment_no });
+  }
   if (pay.enrolment_id) {
     const { data: enr } = await admin.from('enrolments').select('status').eq('id', pay.enrolment_id).single();
     if (enr?.status === 'pending_payment') {
@@ -275,6 +284,8 @@ enrol.post('/join', async (c) => {
   await admin.from('join_codes').update({ used_by: childId, used_at: new Date().toISOString() }).eq('code', code);
   // The ledger is append-only: record that the consented account now exists, linked by join code.
   await admin.from('consents').insert({ parent_id: jc.parent_id, child_id: childId, join_code: code, scope: 'account_created', granted: true });
+  const { data: parentRow } = await admin.from('profiles').select('email').eq('id', jc.parent_id).single();
+  c.executionCtx.waitUntil(emit(c.env, { type: 'member.joined', parent_email: parentRow?.email ?? null, program: 'inner-court' }));
   return c.json({ ok: true, email });
 });
 
@@ -286,6 +297,7 @@ enrol.post('/waitlist', async (c) => {
     .from('waitlist')
     .upsert({ program_slug: input.program ?? 'hershift', email }, { onConflict: 'program_slug,email', ignoreDuplicates: true });
   if (error) throw new HttpError(500, error.message);
+  c.executionCtx.waitUntil(emit(c.env, { type: 'waitlist.joined', email, program: input.program ?? 'hershift' }));
   return c.json({ ok: true });
 });
 

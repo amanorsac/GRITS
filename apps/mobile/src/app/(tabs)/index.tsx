@@ -11,7 +11,7 @@ import { EmptyState, ErrorState, Loading } from '@/components/States';
 import { Txt } from '@/components/Txt';
 import { useMe } from '@/lib/auth';
 import { loadPosts, loadSpaces, type FeedPost } from '@/lib/community';
-import { countWord, firstName, greeting, timeAgo, untilLabel, valueLabel } from '@/lib/format';
+import { countWord, firstName, greeting, timeAgo, untilLabel, valueLabel, valueLine } from '@/lib/format';
 import { currentModule, doneCount, fraction, loadCourse, minutesLeft, nextLesson, type LessonSummary } from '@/lib/learning';
 import { liveState, loadUpcoming, sessionLabel } from '@/lib/live';
 import { supabase } from '@/lib/supabase';
@@ -180,6 +180,11 @@ function MonthCard({
       <Txt variant="heading">
         This month — {value} {done}/{total}
       </Txt>
+      {valueLine(month.value) ? (
+        <Txt variant="meta" muted style={{ fontStyle: 'italic', marginTop: -6 }}>
+          {valueLine(month.value)}
+        </Txt>
+      ) : null}
       <SegmentedBar segments={segments} label={`${done} of ${total} lessons done`} />
       <Txt muted>
         {left === 0

@@ -6,6 +6,7 @@ import community from './routes/community';
 import enrol from './routes/enrol';
 import media from './routes/media';
 import adminRoutes from './routes/admin';
+import site from './routes/site';
 
 const api = new Hono<AppEnv>().basePath('/api');
 
@@ -21,6 +22,7 @@ api.get('/config', (c) =>
 api.route('/', community);
 api.route('/', enrol);
 api.route('/', media);
+api.route('/', site);
 api.route('/admin', adminRoutes);
 
 api.notFound((c) => c.json({ error: 'Not found' }, 404));

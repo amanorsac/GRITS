@@ -10,6 +10,8 @@
   --gold: #c9a227;
   --cream: #f7f2ec;
   --ink: #231017;
+  --plum: #2d1b2e;   /* the Academy's deep hero ground */
+  --blush: #fff5f6;  /* soft section ground from the Academy site */
 
   --bg: var(--cream);
   --surface: #ffffff;
@@ -78,8 +80,8 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 h1, h2, h3, h4 { font-family: var(--display); font-weight: 600; line-height: 1.15; margin: 0 0 .4em; letter-spacing: -0.01em; }
-h1 { font-size: clamp(2rem, 4vw, 3.25rem); }
-h2 { font-size: clamp(1.5rem, 2.6vw, 2.1rem); }
+h1 { font-size: clamp(2rem, 4vw, 3.25rem); letter-spacing: -0.02em; line-height: 1.06; }
+h2 { font-size: clamp(1.5rem, 2.6vw, 2.1rem); letter-spacing: -0.015em; }
 h3 { font-size: 1.25rem; }
 p { margin: 0 0 1em; }
 a { color: var(--primary); }
@@ -102,9 +104,9 @@ img { max-width: 100%; }
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   min-height: 44px; padding: 0 20px; border-radius: var(--radius);
   font: 600 1rem/1 var(--body); border: 2px solid transparent; cursor: pointer; text-decoration: none;
-  transition: transform .08s ease, background .15s ease;
+  transition: transform .18s cubic-bezier(.2,.8,.2,1), background .15s ease, filter .15s ease;
 }
-.btn:active { transform: translateY(1px); }
+.btn:active { transform: scale(0.97); transition-duration: 60ms; } /* respond on press, not release */
 .btn[disabled] { opacity: .55; cursor: not-allowed; }
 .btn-primary { background: var(--primary); color: var(--primary-text); }
 .btn-primary:hover { filter: brightness(1.08); }

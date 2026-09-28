@@ -8,7 +8,7 @@ import { Screen } from '@/components/Screen';
 import { EmptyState, ErrorState, Loading } from '@/components/States';
 import { Txt } from '@/components/Txt';
 import { useMe } from '@/lib/auth';
-import { valueLabel } from '@/lib/format';
+import { valueLabel, valueLine } from '@/lib/format';
 import { KIND_LABEL, lessonState, loadCourse } from '@/lib/learning';
 import { useLoader } from '@/lib/useLoader';
 
@@ -27,6 +27,7 @@ export default function ModuleScreen() {
       back
       eyebrow={m ? `Month ${m.month_no}${m.value ? ` · ${valueLabel(m.value)}` : ''}` : undefined}
       title={m?.title ?? 'Month'}
+      subtitle={m ? valueLine(m.value) || undefined : undefined}
       refreshing={refreshing}
       onRefresh={refresh}
     >

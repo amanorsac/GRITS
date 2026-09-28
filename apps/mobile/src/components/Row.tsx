@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { useTheme } from '@/lib/theme';
 
 import { Icon, type IconName } from './Icon';
+import { PressableScale } from './PressableScale';
 import { Txt } from './Txt';
 
 /** A settings-style list row. */
@@ -42,15 +43,15 @@ export function Row({
   const style = [styles.row, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: t.border }];
   if (!onPress) return <View style={style}>{content}</View>;
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={detail ? `${title}, ${detail}` : title}
       accessibilityHint={accessibilityHint}
-      style={({ pressed }) => [...style, { opacity: pressed ? 0.7 : 1 }]}
+      style={style}
     >
       {content}
-    </Pressable>
+    </PressableScale>
   );
 }
 

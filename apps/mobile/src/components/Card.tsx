@@ -1,6 +1,8 @@
-import { Pressable, View, type StyleProp, type ViewProps, type ViewStyle } from 'react-native';
+import { View, type StyleProp, type ViewProps, type ViewStyle } from 'react-native';
 
 import { brand, radius, useTheme } from '@/lib/theme';
+
+import { PressableScale } from './PressableScale';
 
 type Tone = 'plain' | 'maroon' | 'tint';
 
@@ -19,15 +21,16 @@ export function Card({ tone = 'plain', onPress, style, children, accessibilityLa
 
   if (onPress) {
     return (
-      <Pressable
+      <PressableScale
         onPress={onPress}
+        scaleTo={0.98}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
-        style={({ pressed }) => [base, { opacity: pressed ? 0.9 : 1 }, style]}
+        style={[base, style]}
         {...rest}
       >
         {children}
-      </Pressable>
+      </PressableScale>
     );
   }
   return (

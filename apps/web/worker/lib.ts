@@ -104,3 +104,20 @@ export async function sendEmail(env: Env, to: string | string[], subject: string
 export function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]!);
 }
+
+type Priced = { price_pesewas: number | null; pro_rata?: boolean; cohort_start?: string | null; cohort_end?: string | null };
+
+/**
+ * "Join at any time": the annual price is scaled by the months left in the cohort,
+ * counting the current month. Keep in sync with apps/web/src/lib/format.ts → priceFor().
+ */
+export function priceFor(p: Priced, now = new Date()): number | null {
+  if (p.price_pesewas == null) return null;
+  if (!p.pro_rata || !p.cohort_end) return p.price_pesewas;
+  const end = new Date(p.cohort_end + 'T00:00:00Z');
+  const start = p.cohort_start ? new Date(p.cohort_start + 'T00:00:00Z') : null;
+  const from = start && now < start ? start : now;
+  const months = (end.getUTCFullYear() - from.getUTCFullYear()) * 12 + (end.getUTCMonth() - from.getUTCMonth()) + 1;
+  const remaining = Math.min(12, Math.max(1, months));
+  return Math.round((p.price_pesewas * remaining) / 12);
+}

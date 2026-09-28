@@ -1,11 +1,11 @@
-import { SiteFooter, SiteNav } from './Landing';
+import { PageHero, SiteShell } from './site/Shell';
 
 // Drafts for the Academy's review. [BRACKETS] are values the Academy still needs to supply.
 const DOCS = {
   privacy: {
     title: 'Privacy Policy',
     body: [
-      ['Who we are', 'Grit & Grace Girls Academy, Accra, Ghana ("the Academy"). Data controller registration with the Data Protection Commission of Ghana: [DPC REGISTRATION NUMBER]. Contact: grace@gritgracegirlsacademy.com, +233 54 853 1412.'],
+      ['Who we are', 'Grit & Grace Girls Academy, Accra, Ghana ("the Academy"). This policy builds on the Academy’s Privacy Policy effective 5 January 2026. Data controller registration with the Data Protection Commission of Ghana: [DPC REGISTRATION NUMBER]. Contact: grace@gritgracegirlsacademy.com, +233 54 853 1412.'],
       ['Whose data', 'Parents and guardians who enrol a girl, the girls themselves (members), and our mentors and staff. Children’s data is special personal data under the Data Protection Act, 2012 (Act 843); we process it only with a parent’s or guardian’s consent, which is recorded, dated and can be changed at any time from the parent portal.'],
       ['What we collect', 'Parent: name, phone, email, payment records (card and mobile money details are handled by Paystack; we never see them). Member: first name, chosen username, age band and birth year, lesson progress, attendance, certificates, assessments, and what she writes in the community. Her journal and her messages with her mentor are stored so she can read them back; her parent cannot read them.'],
       ['Why', 'To deliver the mentoring program, keep girls safe, show parents progress, take payment, and meet our legal obligations. We do not sell data, show advertising, or use data to profile girls for anyone else.'],
@@ -41,12 +41,10 @@ const DOCS = {
 export default function Legal({ doc }: { doc: keyof typeof DOCS }) {
   const d = DOCS[doc];
   return (
-    <>
-      <SiteNav />
-      <main className="section">
+    <SiteShell>
+      <PageHero eyebrow="Draft for review · September 2026" title={d.title} />
+      <div className="section">
         <div className="section-inner" style={{ maxWidth: 760 }}>
-          <p className="eyebrow">Draft for review · September 2026</p>
-          <h1>{d.title}</h1>
           {d.body.map(([h, p]) => (
             <section key={h} style={{ marginTop: 24 }}>
               <h3>{h}</h3>
@@ -54,8 +52,7 @@ export default function Legal({ doc }: { doc: keyof typeof DOCS }) {
             </section>
           ))}
         </div>
-      </main>
-      <SiteFooter />
-    </>
+      </div>
+    </SiteShell>
   );
 }

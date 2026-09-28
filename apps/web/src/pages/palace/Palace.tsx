@@ -769,17 +769,24 @@ export function Commerce() {
 }
 
 export function HelpQueue() {
+  const { profile } = useAuth();
   const { data, error, loading, reload } = useLoad(async () => {
     const reqs = must(await sb().from('help_requests').select('*').order('created_at', { ascending: false }).limit(100)) as { id: string; member_id: string; body: string; status: string; created_at: string }[];
     const ids = [...new Set(reqs.map((r) => r.member_id))];
     const people = ids.length ? (must(await sb().from('profiles').select('id, full_name, phone').in('id', ids)) as { id: string; full_name: string }[]) : [];
     const names = new Map(people.map((p) => [p.id, p.full_name]));
     const deletions = must(await sb().from('account_deletion_requests').select('*').eq('status', 'open')) as { id: string; user_id: string; reason: string | null; created_at: string }[];
-    return { reqs: reqs.map((r) => ({ ...r, name: names.get(r.member_id) ?? 'Member' })), deletions };
+    const contacts = isAdmin(profile)
+      ? (must(await sb().from('contact_messages').select('*').order('created_at', { ascending: false }).limit(100)) as { id: string; name: string; email: string; phone: string | null; topic: string | null; subject: string; message: string; status: string; created_at: string }[])
+      : [];
+    return { reqs: reqs.map((r) => ({ ...r, name: names.get(r.member_id) ?? 'Member' })), deletions, contacts };
   });
-  const { profile } = useAuth();
   async function close(id: string) {
     await sb().from('help_requests').update({ status: 'closed', handled_by: profile!.id }).eq('id', id);
+    reload();
+  }
+  async function markContact(id: string, status: string) {
+    await sb().from('contact_messages').update({ status }).eq('id', id);
     reload();
   }
   async function completeDeletion(id: string) {
@@ -813,6 +820,33 @@ export function HelpQueue() {
         ))}
         {data?.reqs.length === 0 && <Empty>No messages.</Empty>}
       </div>
+      {isAdmin(profile) && !!data?.contacts.length && (
+        <section style={{ marginTop: 32 }}>
+          <h2>Website messages</h2>
+          <p className="muted">From the contact form on the public site. They are also emailed to the Academy.</p>
+          <div className="stack">
+            {data.contacts.map((m) => (
+              <article key={m.id} className="card">
+                <div className="spread">
+                  <div className="row">
+                    <Status kind={m.status === 'new' ? 'attention' : 'complete'}>{m.status === 'new' ? 'New' : 'Replied'}</Status>
+                    <strong>{m.name}</strong>
+                    {m.topic && <span className="chip">{m.topic}</span>}
+                  </div>
+                  <span className="muted">{timeAgo(m.created_at)}</span>
+                </div>
+                {m.subject && <p className="serif" style={{ fontSize: '1.1rem', margin: '12px 0 4px' }}>{m.subject}</p>}
+                <p style={{ whiteSpace: 'pre-wrap' }}>{m.message}</p>
+                <div className="row">
+                  <a className="btn btn-primary" href={`mailto:${m.email}?subject=${encodeURIComponent('Re: ' + (m.subject || 'Grit & Grace'))}`}>Reply by email</a>
+                  {m.phone && <a className="btn btn-secondary" href={`tel:${m.phone}`}>Call {m.phone}</a>}
+                  {m.status === 'new' && <button className="btn btn-ghost" onClick={() => markContact(m.id, 'replied')}>Mark replied</button>}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
       {isAdmin(profile) && !!data?.deletions.length && (
         <section className="card" style={{ marginTop: 24 }}>
           <h3>Account deletion requests</h3>

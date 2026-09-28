@@ -1,4 +1,4 @@
-import type { ValueKey } from './types';
+import type { AgeBand, ValueKey } from './types';
 
 export function greeting(date = new Date()): string {
   const h = date.getHours();
@@ -78,4 +78,48 @@ export function isQuietHours(date = new Date()): boolean {
 
 export function monthName(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'long' });
+}
+
+/** The G.I.R.L.S. values, each with the Academy's one-line meaning. */
+export const VALUE_LINE: Record<ValueKey, string> = {
+  gracefulness: 'She carries strength with softness',
+  integrity: 'She does what is right — even when it costs',
+  resilience: 'She falls, she feels, she rises',
+  leadership: 'She does not wait for permission',
+  spirituality: 'She is rooted — in God, in truth, in purpose',
+};
+
+export function valueLine(v: ValueKey | null | undefined): string {
+  return v ? VALUE_LINE[v] : '';
+}
+
+/** "Ages 8–12". Handles the current bands and the older ones still on some rows. */
+export function ageBandLabel(band: AgeBand | string | null | undefined): string {
+  if (!band) return '';
+  if (band === '18+') return 'Ages 18+';
+  const [from, to] = band.split('-');
+  return from && to ? `Ages ${from}–${to}` : band;
+}
+
+/** Chat time: "14:05" today, "Mon" this week, "3 Oct" beyond. */
+export function threadTime(iso: string, now = new Date()): string {
+  const d = new Date(iso);
+  if (sameDay(d, now)) return clockTime(iso);
+  const days = (now.getTime() - d.getTime()) / 86400000;
+  if (days < 7) return d.toLocaleDateString(undefined, { weekday: 'short' });
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
+
+export function sameDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+/** Day separator in a chat: "Today", "Yesterday", "Monday 3 October". */
+export function dayLabel(iso: string, now = new Date()): string {
+  const d = new Date(iso);
+  if (sameDay(d, now)) return 'Today';
+  const y = new Date(now);
+  y.setDate(now.getDate() - 1);
+  if (sameDay(d, y)) return 'Yesterday';
+  return d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
 }

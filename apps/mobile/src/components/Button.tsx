@@ -1,8 +1,9 @@
-import { ActivityIndicator, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { ActivityIndicator, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { brand, fonts, radius, TAP, useTheme } from '@/lib/theme';
 
 import { Icon, type IconName } from './Icon';
+import { PressableScale } from './PressableScale';
 import { Txt } from './Txt';
 
 type Variant =
@@ -47,20 +48,20 @@ export function Button({ label, onPress, variant = 'primary', icon, loading, dis
   })();
 
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       disabled={off}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: !!off, busy: !!loading }}
-      style={({ pressed }) => [
+      style={[
         styles.base,
         {
           backgroundColor: look.bg,
           borderColor: look.border,
           borderRadius: look.r,
-          opacity: off ? 0.55 : pressed ? 0.85 : 1,
+          opacity: off ? 0.55 : 1,
           paddingHorizontal: compact ? 16 : 20,
           minHeight: compact ? TAP : 50,
         },
@@ -77,7 +78,7 @@ export function Button({ label, onPress, variant = 'primary', icon, loading, dis
           </Txt>
         </View>
       )}
-    </Pressable>
+    </PressableScale>
   );
 }
 

@@ -19,6 +19,7 @@ export interface Env {
   BUNNY_TOKEN_KEY?: string;
   JAAS_PRIVATE_KEY?: string;
   RESEND_API_KEY?: string;
+  ZOHO_FLOW_WEBHOOK_URL?: string;
 }
 
 export type Role = 'member' | 'parent' | 'mentor' | 'moderator' | 'admin' | 'owner';

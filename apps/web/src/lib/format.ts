@@ -49,3 +49,21 @@ export function isQuietHours(now = new Date()) {
   const h = now.getUTCHours(); // Accra is GMT
   return h >= 21 || h < 6;
 }
+
+/** Pro-rata price — keep in sync with apps/web/worker/lib.ts → priceFor(). */
+export function priceFor(p: { price_pesewas: number | null; pro_rata?: boolean; cohort_start?: string | null; cohort_end?: string | null }, now = new Date()) {
+  if (p.price_pesewas == null) return null;
+  if (!p.pro_rata || !p.cohort_end) return p.price_pesewas;
+  const end = new Date(p.cohort_end + 'T00:00:00Z');
+  const start = p.cohort_start ? new Date(p.cohort_start + 'T00:00:00Z') : null;
+  const from = start && now < start ? start : now;
+  const months = (end.getUTCFullYear() - from.getUTCFullYear()) * 12 + (end.getUTCMonth() - from.getUTCMonth()) + 1;
+  return Math.round((p.price_pesewas * Math.min(12, Math.max(1, months))) / 12);
+}
+
+/** Months left in a pro-rata cohort, counting this one. */
+export function monthsLeft(cohortEnd: string | null, now = new Date()) {
+  if (!cohortEnd) return 12;
+  const end = new Date(cohortEnd + 'T00:00:00Z');
+  return Math.min(12, Math.max(1, (end.getUTCFullYear() - now.getUTCFullYear()) * 12 + (end.getUTCMonth() - now.getUTCMonth()) + 1));
+}

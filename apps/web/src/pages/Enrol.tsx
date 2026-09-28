@@ -3,18 +3,17 @@ import { Link, useSearchParams } from 'react-router';
 import { Crown, Switch } from '../components/ui';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { ghs } from '../lib/format';
+import { ghs, monthsLeft, priceFor } from '../lib/format';
 import { sb } from '../lib/supabase';
 import type { Program } from '../lib/types';
 
-type Band = '10-12' | '13-15' | '16-18';
+// The Academy's age groups: 8–12 and 13–17.
+type Band = '8-12' | '13-17';
 const DRAFT_KEY = 'gg-enrol-draft';
 
 function bandFor(birthYear: number): Band {
   const age = new Date().getFullYear() - birthYear;
-  if (age <= 12) return '10-12';
-  if (age <= 15) return '13-15';
-  return '16-18';
+  return age <= 12 ? '8-12' : '13-17';
 }
 
 function loadDraft() {
@@ -36,7 +35,7 @@ export default function Enrol() {
   const [consent, setConsent] = useState(false);
   const [digest, setDigest] = useState(true);
   const [channel, setChannel] = useState<'mobile_money' | 'card'>('mobile_money');
-  const [plan, setPlan] = useState<'full' | 'instalments'>('instalments');
+  const [plan, setPlan] = useState<'full' | 'instalments'>('full');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmEmail, setConfirmEmail] = useState(false);
@@ -56,7 +55,7 @@ export default function Enrol() {
 
   useEffect(() => {
     // Community stays locked under 13 until the parent switches it on.
-    if (band) setPerms((p) => ({ ...p, court: band !== '10-12' }));
+    if (band) setPerms((p) => ({ ...p, court: band !== '8-12' }));
   }, [band]);
 
   async function submitParent(e: FormEvent) {
@@ -110,8 +109,8 @@ export default function Enrol() {
     }
   }
 
-  const price = program?.price_pesewas ?? null;
-  const parts = program?.instalments ?? 3;
+  const price = program ? priceFor(program) : null;
+  const parts = program?.instalments ?? 1;
 
   return (
     <div className="split">
@@ -191,7 +190,7 @@ export default function Enrol() {
               <input
                 type="number"
                 required
-                min={new Date().getFullYear() - 19}
+                min={new Date().getFullYear() - 17}
                 max={new Date().getFullYear() - 8}
                 value={child.birth_year}
                 onChange={(e) => setChild({ ...child, birth_year: e.target.value })}
@@ -199,7 +198,7 @@ export default function Enrol() {
             </label>
             {band && (
               <p className="notice">
-                Age band {band}. {band === '10-12' ? 'Community features stay locked until you switch them on.' : 'The main community feed is on; you can switch it off.'}
+                Age group {band}. {band === '8-12' ? 'Community features stay locked until you switch them on.' : 'The main community feed is on; you can switch it off.'}
               </p>
             )}
             <button className="btn btn-primary">Continue</button>
@@ -211,7 +210,7 @@ export default function Enrol() {
             <h2>What {firstName} can do inside</h2>
             <p className="muted">
               {age ? `She is ${age}, so ` : ''}
-              {band === '10-12' ? 'community features stay locked until you switch them on. ' : ''}You can change any of this later from your parent portal.
+              {band === '8-12' ? 'community features stay locked until you switch them on. ' : ''}You can change any of this later from your parent portal.
             </p>
             <div>
               <div className="perm">
@@ -272,13 +271,19 @@ export default function Enrol() {
 
             <div className="card">
               <div className="spread">
-                <strong>The Inner Court · 12 months</strong>
+                <strong>The Inner Court · Royal investment</strong>
               </div>
+              {program?.pro_rata && price !== program.price_pesewas && (
+                <p className="muted" style={{ margin: '8px 0 0' }}>
+                  Join at any time — {monthsLeft(program.cohort_end)} months remain in this cohort, so you pay {ghs(price)} instead of {ghs(program.price_pesewas)} for the full year.
+                </p>
+              )}
               <div className="pay-options" style={{ marginTop: 12 }}>
                 <label className="pay-option">
                   <input type="radio" name="plan" checked={plan === 'full'} onChange={() => setPlan('full')} /> <strong>{ghs(price)}</strong>
                   <div className="muted">Pay in full</div>
                 </label>
+                {parts > 1 && (
                 <label className="pay-option">
                   <input type="radio" name="plan" checked={plan === 'instalments'} onChange={() => setPlan('instalments')} />{' '}
                   <strong>
@@ -286,6 +291,7 @@ export default function Enrol() {
                   </strong>
                   <div className="muted">Monthly instalments</div>
                 </label>
+                )}
               </div>
             </div>
 

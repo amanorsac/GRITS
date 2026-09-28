@@ -15,6 +15,7 @@ import { Txt } from '@/components/Txt';
 import { lessonPlayback } from '@/lib/api';
 import { useMe } from '@/lib/auth';
 import { valueLabel } from '@/lib/format';
+import { commitHaptic } from '@/lib/haptics';
 import { markStarted } from '@/lib/learning';
 import { must, supabase } from '@/lib/supabase';
 import { brand, fonts, radius, useTheme } from '@/lib/theme';
@@ -115,6 +116,7 @@ export default function LessonScreen() {
       return;
     }
     setDoneNow(true);
+    commitHaptic();
     const r = (res ?? {}) as { done?: number; total?: number; certificate?: string | null };
     if (r.certificate) {
       Alert.alert(

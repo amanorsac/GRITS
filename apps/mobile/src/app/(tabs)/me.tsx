@@ -143,6 +143,12 @@ export default function Me() {
 
           <Card style={{ paddingVertical: 4 }}>
             <Row
+              icon="message-text-outline"
+              title="Messages"
+              detail={me.role === 'member' ? 'Your Circle mentor' : 'Girls in your Circles'}
+              onPress={() => router.push('/messages')}
+            />
+            <Row
               icon="notebook-outline"
               title="My journal"
               detail={plural(data.journalCount, 'entry', 'entries')}

@@ -5,6 +5,7 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { iconFont } from '@/components/Icon';
@@ -37,6 +38,7 @@ export default function RootLayout() {
   const navTheme = t.scheme === 'dark' ? DarkTheme : DefaultTheme;
   return (
     <SafeAreaProvider>
+      <KeyboardProvider>
       <ThemeProvider value={{ ...navTheme, colors: { ...navTheme.colors, background: t.bg, primary: t.accent, card: t.header, text: t.text, border: t.border } }}>
         <StatusBar style="light" />
         {configured ? (
@@ -47,6 +49,7 @@ export default function RootLayout() {
           <NotConfigured onReady={() => SplashScreen.hideAsync()} onRetry={check} />
         )}
       </ThemeProvider>
+      </KeyboardProvider>
     </SafeAreaProvider>
   );
 }
@@ -85,6 +88,8 @@ function RootNavigator() {
         <Stack.Screen name="journal" />
         <Stack.Screen name="certificates" />
         <Stack.Screen name="talk" />
+        <Stack.Screen name="messages/index" />
+        <Stack.Screen name="messages/[threadId]" />
       </Stack.Protected>
     </Stack>
   );

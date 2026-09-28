@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
@@ -8,6 +8,7 @@ import { Chip } from '@/components/Chip';
 import { Field } from '@/components/Field';
 import { Icon } from '@/components/Icon';
 import { PostCard } from '@/components/PostCard';
+import { PressableScale } from '@/components/PressableScale';
 import { Screen } from '@/components/Screen';
 import { EmptyState, ErrorState, Loading } from '@/components/States';
 import { Txt } from '@/components/Txt';
@@ -15,6 +16,7 @@ import { createPost, type PostKind } from '@/lib/api';
 import { useMe } from '@/lib/auth';
 import { loadPosts, loadSpaces, PAGE_SIZE, POST_KINDS, type FeedPost } from '@/lib/community';
 import { isQuietHours } from '@/lib/format';
+import { commitHaptic } from '@/lib/haptics';
 import { brand, TAP, useTheme } from '@/lib/theme';
 import { useLoader } from '@/lib/useLoader';
 
@@ -88,7 +90,7 @@ export default function Court() {
   }
 
   const talkLink = (
-    <Pressable
+    <PressableScale
       onPress={() => router.push('/talk')}
       accessibilityRole="button"
       accessibilityLabel="Talk to someone"
@@ -97,13 +99,28 @@ export default function Court() {
       <Txt variant="label" color={brand.pinkSoft} style={{ textDecorationLine: 'underline' }}>
         Talk to someone
       </Txt>
-    </Pressable>
+    </PressableScale>
+  );
+
+  const headerActions = (
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <PressableScale
+        onPress={() => router.push('/messages')}
+        accessibilityRole="button"
+        accessibilityLabel="Messages"
+        accessibilityHint="Opens your messages with your mentor"
+        style={{ width: TAP, height: TAP, alignItems: 'center', justifyContent: 'center' }}
+      >
+        <Icon name="message-text-outline" size={24} color={brand.cream} />
+      </PressableScale>
+      {talkLink}
+    </View>
   );
 
   return (
     <Screen
       title="The Court"
-      right={talkLink}
+      right={headerActions}
       refreshing={refreshing}
       onRefresh={onRefresh}
       header={
@@ -162,7 +179,7 @@ export default function Court() {
 function SpaceChip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
   // Chips on the maroon header: pill shape is allowed on maroon surfaces.
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected }}
@@ -180,7 +197,7 @@ function SpaceChip({ label, selected, onPress }: { label: string; selected: bool
       <Txt variant="label" color={selected ? brand.maroonDeep : brand.cream}>
         {label}
       </Txt>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -212,6 +229,7 @@ function Composer({ spaceId, onPosted }: { spaceId: string; onPosted: () => void
     setNotice(null);
     try {
       const res = await createPost({ space_id: spaceId, kind, body: text });
+      commitHaptic();
       setBody('');
       setKind('general');
       setNotice(res.status === 'pending' ? 'Thanks — a mentor checks every first post before it appears.' : 'Posted.');

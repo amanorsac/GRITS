@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -14,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { brand, TAP, useTheme } from '@/lib/theme';
 
 import { Icon } from './Icon';
+import { PressableScale } from './PressableScale';
 import { Txt } from './Txt';
 
 type Props = {
@@ -21,6 +21,8 @@ type Props = {
   eyebrow?: string;
   subtitle?: string;
   back?: boolean;
+  /** Large title even on a pushed screen (Messages). */
+  large?: boolean;
   right?: ReactNode;
   /** Extra content inside the maroon header. */
   header?: ReactNode;
@@ -31,7 +33,7 @@ type Props = {
 };
 
 /** Every screen: a maroon header (safe-area aware) over the cream page. */
-export function Screen({ title, eyebrow, subtitle, back, right, header, children, refreshing, onRefresh, scroll = true }: Props) {
+export function Screen({ title, eyebrow, subtitle, back, large, right, header, children, refreshing, onRefresh, scroll = true }: Props) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -39,7 +41,7 @@ export function Screen({ title, eyebrow, subtitle, back, right, header, children
     <View style={[styles.header, { backgroundColor: t.header, paddingTop: insets.top + 8 }]}>
       <View style={styles.headerRow}>
         {back ? (
-          <Pressable
+          <PressableScale
             onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
             accessibilityRole="button"
             accessibilityLabel="Back"
@@ -47,7 +49,7 @@ export function Screen({ title, eyebrow, subtitle, back, right, header, children
             style={styles.backBtn}
           >
             <Icon name="chevron-left" size={30} color={brand.cream} />
-          </Pressable>
+          </PressableScale>
         ) : null}
         <View style={{ flex: 1 }}>
           {eyebrow ? (
@@ -56,7 +58,7 @@ export function Screen({ title, eyebrow, subtitle, back, right, header, children
             </Txt>
           ) : null}
           {title ? (
-            <Txt variant={back ? 'heading' : 'title'} color={t.headerText} accessibilityRole="header">
+            <Txt variant={back && !large ? 'heading' : 'display'} color={t.headerText} accessibilityRole="header">
               {title}
             </Txt>
           ) : null}

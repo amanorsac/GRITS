@@ -1,8 +1,9 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { fonts, radius, TAP, useTheme, type StatusKind } from '@/lib/theme';
 
 import { Icon, type IconName } from './Icon';
+import { PressableScale } from './PressableScale';
 import { Txt } from './Txt';
 
 /** Selectable filter chip (spaces, post kinds). */
@@ -19,18 +20,18 @@ export function Chip({
 }) {
   const t = useTheme();
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityState={{ selected: !!selected, disabled: !!disabled }}
       accessibilityLabel={label}
-      style={({ pressed }) => [
+      style={[
         styles.chip,
         {
           backgroundColor: selected ? t.primary : t.surface,
           borderColor: selected ? t.primary : t.border,
-          opacity: disabled ? 0.5 : pressed ? 0.85 : 1,
+          opacity: disabled ? 0.5 : 1,
         },
       ]}
     >
@@ -38,7 +39,7 @@ export function Chip({
       <Txt variant="meta" color={selected ? t.onPrimary : t.text} style={{ fontFamily: fonts.bodySemi, fontSize: 15 }}>
         {label}
       </Txt>
-    </Pressable>
+    </PressableScale>
   );
 }
 

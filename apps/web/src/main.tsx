@@ -2,15 +2,18 @@ import { lazy, StrictMode, Suspense, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router';
 import './styles.css';
+import './site.css';
 import { Crown, RequireRole } from './components/ui';
 import { AuthProvider } from './lib/auth';
 import { initSupabase, supabaseConfigError } from './lib/supabase';
-import Landing from './pages/Landing';
+import Home from './pages/site/Home';
+import { About, Contact, Events, Journal as SiteJournal, Programs } from './pages/site/Pages';
+import InnerCourtCourse from './pages/site/Course';
 import { Join, Login, SetPassword, VerifyCertificate } from './pages/Auth';
 import Enrol, { EnrolComplete } from './pages/Enrol';
 import Legal from './pages/Legal';
 import MemberLayout from './pages/member/Layout';
-import Home from './pages/member/Home';
+import MemberHome from './pages/member/Home';
 import { Academy, Journal, LessonPage, ModulePage, TalkToSomeone } from './pages/member/Academy';
 import Court from './pages/member/Court';
 import { LiveList, LiveRoom } from './pages/member/Live';
@@ -35,7 +38,13 @@ const MEMBER_AREA = ['member', 'mentor', 'moderator', 'admin', 'owner'] as const
 const STAFF = ['mentor', 'moderator', 'admin', 'owner'] as const;
 
 const router = createBrowserRouter([
-  { path: '/', element: <Landing /> },
+  { path: '/', element: <Home /> },
+  { path: '/about', element: <About /> },
+  { path: '/programs', element: <Programs /> },
+  { path: '/programs/inner-court', element: <InnerCourtCourse /> },
+  { path: '/events', element: <Events /> },
+  { path: '/journal', element: <SiteJournal /> },
+  { path: '/contact', element: <Contact /> },
   { path: '/login', element: <Login /> },
   { path: '/join', element: <Join /> },
   { path: '/enrol', element: <Enrol /> },
@@ -63,7 +72,7 @@ const router = createBrowserRouter([
       </RequireRole>
     ),
     children: [
-      { index: true, element: <Home /> },
+      { index: true, element: <MemberHome /> },
       { path: 'academy', element: <Academy /> },
       { path: 'academy/:moduleId', element: <ModulePage /> },
       { path: 'lesson/:lessonId', element: <LessonPage /> },
@@ -94,7 +103,7 @@ const router = createBrowserRouter([
       { path: 'people', element: <People /> },
     ],
   },
-  { path: '*', element: <Landing /> },
+  { path: '*', element: <Home /> },
 ]);
 
 const root = createRoot(document.getElementById('root')!);

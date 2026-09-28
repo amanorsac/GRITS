@@ -8,7 +8,7 @@ export type Profile = {
   username: string | null;
   phone: string | null;
   email: string | null;
-  age_band: '10-12' | '13-15' | '16-18' | null;
+  age_band: '8-12' | '13-17' | '18+' | '10-12' | '13-15' | '16-18' | null;
   crown_level: number;
   circle_id: string | null;
   data_saver: boolean;
@@ -25,6 +25,26 @@ export type Program = {
   price_pesewas: number | null;
   instalments: number;
   is_open: boolean;
+  audience: string;
+  pro_rata: boolean;
+  cohort_start: string | null;
+  cohort_end: string | null;
+  inclusions: string[];
+  position: number;
+};
+
+export type AcademyEvent = {
+  id: string;
+  slug: string;
+  title: string;
+  tagline: string;
+  description: string;
+  starts_at: string | null;
+  ends_at: string | null;
+  date_label: string | null;
+  venue: string | null;
+  program_slug: string | null;
+  register_url: string | null;
 };
 
 export type Module = {

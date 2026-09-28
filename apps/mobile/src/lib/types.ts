@@ -93,3 +93,11 @@ export type LiveSession = {
 export type Badge = { id: string; slug: string; name: string; description: string };
 export type Certificate = { id: string; code: string; title: string; issued_at: string };
 export type JournalEntry = { id: string; prompt: string | null; body: string; created_at: string; lesson_id: string | null };
+
+/** Old bands ('10-12', '13-15', '16-18') still exist on older rows; new rows use '8-12' / '13-17'. */
+export type AgeBand = '8-12' | '13-17' | '18+' | '10-12' | '13-15' | '16-18';
+
+export type Circle = { id: string; name: string; mentor_id: string | null };
+
+export type DmThread = { id: string; member_id: string; mentor_id: string; created_at: string };
+export type DmMessage = { id: string; thread_id: string; sender_id: string; body: string; created_at: string };
