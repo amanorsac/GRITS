@@ -46,6 +46,14 @@
         "ascAppId": "6816804765",
         "appleTeamId": "SGQVTNFK4Q"
       }
+    },
+    "production-local": {
+      "extends": "production",
+      "ios": {
+        "ascApiKeyPath": "../../../Security/AuthKey_DX2G248MZ2.p8",
+        "ascApiKeyId": "DX2G248MZ2",
+        "ascApiKeyIssuerId": "28cae568-8f1c-4db7-be8e-bb82592f6313"
+      }
     }
   }
 }
