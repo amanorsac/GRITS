@@ -119,5 +119,5 @@ export function priceFor(p: Priced, now = new Date()): number | null {
   const from = start && now < start ? start : now;
   const months = (end.getUTCFullYear() - from.getUTCFullYear()) * 12 + (end.getUTCMonth() - from.getUTCMonth()) + 1;
   const remaining = Math.min(12, Math.max(1, months));
-  return Math.round((p.price_pesewas * remaining) / 12);
+  return Math.round((p.price_pesewas * remaining) / 12 / 100) * 100; // whole cedis, same as the web app
 }

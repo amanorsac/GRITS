@@ -58,7 +58,8 @@ export function priceFor(p: { price_pesewas: number | null; pro_rata?: boolean; 
   const start = p.cohort_start ? new Date(p.cohort_start + 'T00:00:00Z') : null;
   const from = start && now < start ? start : now;
   const months = (end.getUTCFullYear() - from.getUTCFullYear()) * 12 + (end.getUTCMonth() - from.getUTCMonth()) + 1;
-  return Math.round((p.price_pesewas * Math.min(12, Math.max(1, months))) / 12);
+  // Rounded to whole cedis — nobody wants to pay GHS 1,249.58.
+  return Math.round((p.price_pesewas * Math.min(12, Math.max(1, months))) / 12 / 100) * 100;
 }
 
 /** Months left in a pro-rata cohort, counting this one. */

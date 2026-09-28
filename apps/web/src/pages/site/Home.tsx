@@ -58,8 +58,9 @@ function Spotlight({ event }: { event: AcademyEvent }) {
         </p>
       )}
       <p style={{ fontSize: '.95rem' }}>
-        {eventDate(event)}
-        {event.venue ? ` · ${event.venue}` : ''}
+        {event.starts_at ? eventDate(event) : null}
+        {event.starts_at && event.venue ? ' · ' : ''}
+        {event.venue}
       </p>
       <Link to={`/contact?topic=${event.program_slug ?? 'enquiry'}&subject=${encodeURIComponent(event.title)}`} className="btn btn-on-dark btn-block">
         Register interest
