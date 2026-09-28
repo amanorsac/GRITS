@@ -221,7 +221,7 @@ create table public.member_badges (
 
 create table public.certificates (
   id uuid primary key default gen_random_uuid(),
-  code text unique not null default ('GG-' || upper(substr(encode(gen_random_bytes(3), 'hex'), 1, 4))),
+  code text unique not null default ('GG-' || upper(substr(md5(gen_random_uuid()::text), 1, 4))),
   member_id uuid not null references public.profiles (id) on delete cascade,
   module_id uuid references public.modules (id) on delete set null,
   title text not null,
