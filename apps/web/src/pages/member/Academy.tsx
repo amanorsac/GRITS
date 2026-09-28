@@ -183,6 +183,7 @@ export function LessonPage() {
           <p>{lesson.summary}</p>
           {lesson.body && <div style={{ whiteSpace: 'pre-wrap' }}>{lesson.body}</div>}
         </div>
+        <LessonResources lessonId={lesson.id} dataSaver={me.data_saver} />
 
         <div className="row" role="tablist">
           <button className="chip" role="tab" aria-pressed={tab === 'journal'} onClick={() => setTab('journal')}>
@@ -263,6 +264,65 @@ export function LessonPage() {
         )}
       </aside>
     </div>
+  );
+}
+
+type LessonResource = { id: string; title: string; path: string; size_bytes: number | null };
+
+function fileSize(n: number | null) {
+  if (n == null) return '';
+  if (n < 1024 * 1024) return `${Math.max(1, Math.round(n / 1024))} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+
+const BIG_FILE = 5 * 1024 * 1024;
+
+/** Workbooks, printables and audio for this lesson — private files, opened with a one-hour link. */
+function LessonResources({ lessonId, dataSaver }: { lessonId: string; dataSaver: boolean }) {
+  const { data } = useLoad(async () => {
+    const { data, error } = await sb().from('lesson_resources').select('id, title, path, size_bytes').eq('lesson_id', lessonId).order('created_at');
+    if (error) throw error;
+    return (data ?? []) as LessonResource[];
+  }, [lessonId]);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  if (!data?.length) return null;
+
+  async function download(r: LessonResource) {
+    setErr(null);
+    setBusy(r.id);
+    const name = r.path.split('/').pop() ?? r.title;
+    const { data: s, error } = await sb().storage.from('course').createSignedUrl(r.path, 3600, { download: name });
+    setBusy(null);
+    if (error || !s) return setErr('Could not open this file. Check your connection and try again.');
+    window.location.assign(s.signedUrl);
+  }
+
+  return (
+    <section className="card">
+      <h3>Workbooks &amp; resources</h3>
+      <ul className="list">
+        {data.map((r) => {
+          const big = (r.size_bytes ?? 0) > BIG_FILE;
+          return (
+            <li key={r.id}>
+              <Icon name="file" />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <strong style={{ overflowWrap: 'anywhere' }}>{r.title}</strong>
+                <div className="muted">
+                  {fileSize(r.size_bytes)}
+                  {big && (dataSaver ? ' · large file — best on Wi-Fi' : ' · large file')}
+                </div>
+              </div>
+              <button className="btn btn-secondary" onClick={() => download(r)} disabled={busy === r.id} aria-label={`Download ${r.title}`}>
+                {busy === r.id ? 'Opening…' : 'Download'}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {err && <p className="error" style={{ marginTop: 12 }}>{err}</p>}
+    </section>
   );
 }
 

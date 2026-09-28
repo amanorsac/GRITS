@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { FOUNDER, FOUNDRY, INNER_COURT, SCRIPTURE, TAGLINES, VALUES, BLOG } from '../../content/academy';
 import { ghs, priceFor } from '../../lib/format';
+import { loadPublishedArticles, useSite, type Article, type SiteEvent } from '../../lib/site';
 import type { AcademyEvent } from '../../lib/types';
-import { nextEvent, SiteShell, useSiteData } from './Shell';
+import { Cover, FounderPortrait, nextEvent, RegisterLink, SiteShell, useSiteData } from './Shell';
 
 function useCountdown(target: string | null) {
   const [now, setNow] = useState(() => Date.now());
@@ -25,10 +25,27 @@ export function eventDate(e: AcademyEvent) {
   return `${day} · ${t(d)}${e.ends_at ? ` – ${t(new Date(e.ends_at))}` : ''}`;
 }
 
-function Spotlight({ event }: { event: AcademyEvent }) {
+/** The newest published journal articles. */
+export function useArticles(limit?: number) {
+  const [list, setList] = useState<Article[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    loadPublishedArticles(limit)
+      .then((a) => alive && setList(a))
+      .catch((e) => alive && setError(e instanceof Error ? e.message : String(e)));
+    return () => {
+      alive = false;
+    };
+  }, [limit]);
+  return { list, error };
+}
+
+function Spotlight({ event }: { event: SiteEvent }) {
   const c = useCountdown(event.starts_at);
   return (
     <aside className="spotlight" aria-label="Next event">
+      {event.cover_url && <Cover url={event.cover_url} className="spotlight-cover" />}
       <p className="eyebrow" style={{ color: 'var(--pink-bright)', margin: 0 }}>
         Upcoming event
       </p>
@@ -62,40 +79,52 @@ function Spotlight({ event }: { event: AcademyEvent }) {
         {event.starts_at && event.venue ? ' · ' : ''}
         {event.venue}
       </p>
-      <Link to={`/contact?topic=${event.program_slug ?? 'enquiry'}&subject=${encodeURIComponent(event.title)}`} className="btn btn-on-dark btn-block">
-        Register interest
-      </Link>
+      <RegisterLink event={event} className="btn btn-on-dark btn-block" />
     </aside>
   );
 }
 
 export default function Home() {
   const data = useSiteData();
+  const hero = useSite('hero');
+  const SCRIPTURE = useSite('scripture');
+  const FOUNDRY = useSite('foundry');
+  const VALUES = useSite('values');
+  const FOUNDER = useSite('founder');
+  const INNER_COURT = useSite('inner_court');
+  const TAGLINES = useSite('taglines');
+  const H = useSite('home');
+  const articles = useArticles(3);
   const inner = data?.programs.find((p) => p.slug === 'inner-court');
   const event = data ? nextEvent(data.events) : null;
   const price = inner ? priceFor(inner) : null;
 
   return (
     <SiteShell>
-      <section className="hero-v2">
+      <section className={`hero-v2${hero.image ? ' has-image' : ''}`}>
+        {hero.image && <img className="hero-bg" src={hero.image} alt="" fetchPriority="high" decoding="async" />}
         <div className="hero-inner">
           <div>
-            <p className="eyebrow eyebrow-line">Welcome home</p>
+            <p className="eyebrow eyebrow-line">{hero.eyebrow}</p>
             <h1>
-              We don&rsquo;t just raise girls.
-              <br />
-              We raise <em>Queens.</em>
+              {hero.line1}
+              {hero.line1 && (hero.line2 || hero.emphasis) && <br />}
+              {hero.line2}
+              {hero.line2 && hero.emphasis ? ' ' : ''}
+              {hero.emphasis && <em>{hero.emphasis}</em>}
             </h1>
-            <p className="lead">{TAGLINES.welcome}</p>
-            <p className="lead" style={{ fontSize: '1.05rem', opacity: 0.85 }}>
-              Faith-based mentoring for girls 8–17 — intellectually sharp, emotionally grounded, spiritually wise, socially confident.
-            </p>
+            {hero.lead && <p className="lead">{hero.lead}</p>}
+            {hero.sublead && (
+              <p className="lead" style={{ fontSize: '1.05rem', opacity: 0.85 }}>
+                {hero.sublead}
+              </p>
+            )}
             <div className="row" style={{ marginTop: 28 }}>
               <Link to="/enrol" className="btn btn-on-dark" style={{ minHeight: 52, padding: '0 28px' }}>
-                Secure her crown today
+                {hero.primaryCta}
               </Link>
               <Link to="/programs" className="btn btn-secondary btn-pill" style={{ color: '#fff' }}>
-                Explore the programs
+                {hero.secondaryCta}
               </Link>
             </div>
           </div>
@@ -115,7 +144,7 @@ export default function Home() {
 
       <section className="scripture" aria-label="Scripture">
         <p className="eyebrow" style={{ margin: 0 }}>
-          A royal priesthood · Chosen &amp; beloved
+          {SCRIPTURE.eyebrow}
         </p>
         <blockquote>“{SCRIPTURE.text}”</blockquote>
         <cite>— {SCRIPTURE.ref}</cite>
@@ -127,21 +156,21 @@ export default function Home() {
             <p className="eyebrow">{FOUNDRY.eyebrow}</p>
             <h2>{FOUNDRY.title}</h2>
             <p style={{ fontSize: '1.15rem' }}>{FOUNDRY.lead}</p>
-            {FOUNDRY.body.map((p) => (
-              <p key={p.slice(0, 20)}>{p}</p>
+            {FOUNDRY.body.map((p, i) => (
+              <p key={i}>{p}</p>
             ))}
             <Link to="/about" className="btn btn-secondary">
-              Discover our story
+              {FOUNDRY.cta}
             </Link>
           </div>
           <div className="card card-maroon" style={{ padding: 32 }}>
-            {FOUNDRY.close.map((l) => (
-              <p key={l} className="serif" style={{ fontSize: '1.6rem', margin: '0 0 6px', color: '#fff' }}>
+            {FOUNDRY.close.map((l, i) => (
+              <p key={i} className="serif" style={{ fontSize: '1.6rem', margin: '0 0 6px', color: '#fff' }}>
                 {l}
               </p>
             ))}
             <p className="eyebrow" style={{ color: 'var(--gold)', marginTop: 16, marginBottom: 0 }}>
-              This is the foundry.
+              {FOUNDRY.closeTag}
             </p>
           </div>
         </div>
@@ -150,24 +179,11 @@ export default function Home() {
       <section className="section band-plum" id="values">
         <div className="section-inner">
           <p className="eyebrow" style={{ color: 'var(--pink-bright)' }}>
-            The Inner Court · The golden pillars
+            {H.valuesEyebrow}
           </p>
-          <h2>G.I.R.L.S. — the essence of who she becomes</h2>
-          <p style={{ maxWidth: 680 }}>A 12-month transformational mentoring journey designed to nurture confident, purpose-driven, emotionally intelligent young queens.</p>
-          <div className="value-grid">
-            {VALUES.map((v) => (
-              <article key={v.name} className="value-card">
-                <div className="letter" aria-hidden="true">
-                  {v.letter}
-                </div>
-                <h3>{v.name}</h3>
-                <div className="sub">{v.sub}</div>
-                {v.lines.map((l) => (
-                  <p key={l}>{l}</p>
-                ))}
-              </article>
-            ))}
-          </div>
+          <h2>{H.valuesTitle}</h2>
+          <p style={{ maxWidth: 680 }}>{H.valuesText}</p>
+          <ValueGrid values={VALUES} />
         </div>
       </section>
 
@@ -175,21 +191,22 @@ export default function Home() {
         <div className="section-inner">
           <div className="section-head">
             <div>
-              <p className="eyebrow">Programs</p>
-              <h2>Where she becomes who she is</h2>
+              <p className="eyebrow">{H.programsEyebrow}</p>
+              <h2>{H.programsTitle}</h2>
               <p className="muted" style={{ maxWidth: 640, margin: 0 }}>
-                There is a gap between what school teaches and what home provides. We fill it with wisdom, values and life skills.
+                {H.programsText}
               </p>
             </div>
             <Link to="/programs">All programs and services →</Link>
           </div>
           <div className="program-grid">
             <article className="card program-card featured">
+              <Cover url={inner?.cover_url} />
               <div className="spread">
-                <span className="status status-progress">Flagship · enrolling</span>
-                <span className="muted">12 months</span>
+                <span className="status status-progress">Flagship · {inner && !inner.is_open ? 'waitlist' : 'enrolling'}</span>
+                <span className="muted">{inner?.duration_label || '12 months'}</span>
               </div>
-              <h3>The Inner Court</h3>
+              <h3>{inner?.name ?? 'The Inner Court'}</h3>
               <p style={{ margin: 0 }}>{INNER_COURT.summons}</p>
               <div>
                 <div className="price">{ghs(price)}</div>
@@ -210,6 +227,7 @@ export default function Home() {
               .filter((p) => p.slug === 'hershift' || p.slug === 'royal-table')
               .map((p) => (
                 <article key={p.slug} className="card program-card">
+                  <Cover url={p.cover_url} />
                   <div className="spread">
                     <span className={`status ${p.is_open ? 'status-complete' : 'status-attention'}`}>{p.is_open ? p.duration_label : 'Waitlist open'}</span>
                     <span className="muted">{p.audience}</span>
@@ -234,11 +252,9 @@ export default function Home() {
       <section className="section band-blush" id="parents">
         <div className="section-inner" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 40, alignItems: 'center' }}>
           <div>
-            <p className="eyebrow">For parents</p>
-            <h2>Watch her grow, week by week</h2>
-            <p>
-              Her progress, her attendance, her certificates, and a measured before-and-after across all five values — in your own parent portal. Plus the Parents Power Circle. Not a mystery. Not a WhatsApp group.
-            </p>
+            <p className="eyebrow">{H.parentsEyebrow}</p>
+            <h2>{H.parentsTitle}</h2>
+            <p>{H.parentsText}</p>
             <Link to="/enrol" className="btn btn-primary">
               Start with your details
             </Link>
@@ -276,17 +292,17 @@ export default function Home() {
 
       <section className="section" id="founder">
         <div className="section-inner founder-v2">
-          <div className="portrait">[FOUNDER PORTRAIT]</div>
+          <FounderPortrait />
           <div>
             <p className="eyebrow">Meet the founder</p>
             <h2>{FOUNDER.name}</h2>
             <p className="muted" style={{ fontWeight: 600 }}>
-              {FOUNDER.title} · {FOUNDER.credentials}
+              {[FOUNDER.title, FOUNDER.credentials].filter(Boolean).join(' · ')}
             </p>
-            {FOUNDER.bio.map((p) => (
-              <p key={p.slice(0, 20)}>{p}</p>
+            {FOUNDER.bio.map((p, i) => (
+              <p key={i}>{p}</p>
             ))}
-            <blockquote>“{FOUNDER.quote}”</blockquote>
+            {FOUNDER.quote && <blockquote>“{FOUNDER.quote}”</blockquote>}
           </div>
         </div>
       </section>
@@ -295,14 +311,16 @@ export default function Home() {
         <div className="section-inner">
           <div className="section-head" style={{ marginBottom: 20 }}>
             <div>
-              <p className="eyebrow">Stories &amp; insights</p>
-              <h2>Wisdom for raising Queens</h2>
+              <p className="eyebrow">{H.journalEyebrow}</p>
+              <h2>{H.journalTitle}</h2>
             </div>
             <Link to="/journal">Read the journal →</Link>
           </div>
-          <div className="blog-grid">
-            {BLOG.slice(0, 3).map((b) => (
-              <Link key={b.title} to="/journal" className="card blog-card">
+          {articles.list && articles.list.length === 0 && <p className="muted">New articles are on their way.</p>}
+          <div className="blog-grid" aria-busy={!articles.list && !articles.error}>
+            {articles.list?.map((b) => (
+              <Link key={b.id} to={`/journal/${b.slug}`} className="card blog-card">
+                <Cover url={b.cover_url} className="blog-cover-img" />
                 <span className="eyebrow" style={{ margin: 0 }}>
                   {b.tag}
                 </span>
@@ -319,10 +337,10 @@ export default function Home() {
       <section className="section band-plum cta-band">
         <div className="section-inner">
           <p className="eyebrow" style={{ color: 'var(--pink-bright)' }}>
-            Ready to join the movement?
+            {H.ctaEyebrow}
           </p>
-          <h2>Because when leaders unite, daughters rise.</h2>
-          <p style={{ maxWidth: 560, margin: '0 auto 24px' }}>Secure her crown today and connect with a network dedicated to making a generational impact.</p>
+          <h2>{H.ctaTitle}</h2>
+          <p style={{ maxWidth: 560, margin: '0 auto 24px' }}>{H.ctaText}</p>
           <div className="row" style={{ justifyContent: 'center' }}>
             <Link to="/enrol" className="btn btn-on-dark" style={{ minHeight: 52 }}>
               Secure her crown
@@ -334,5 +352,24 @@ export default function Home() {
         </div>
       </section>
     </SiteShell>
+  );
+}
+
+export function ValueGrid({ values }: { values: { letter: string; name: string; sub: string; lines: string[] }[] }) {
+  return (
+    <div className="value-grid">
+      {values.map((v, i) => (
+        <article key={i} className="value-card">
+          <div className="letter" aria-hidden="true">
+            {v.letter || v.name.slice(0, 1)}
+          </div>
+          <h3>{v.name}</h3>
+          <div className="sub">{v.sub}</div>
+          {v.lines.map((l, j) => (
+            <p key={j}>{l}</p>
+          ))}
+        </article>
+      ))}
+    </div>
   );
 }

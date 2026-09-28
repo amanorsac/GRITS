@@ -13,12 +13,13 @@ export default function Home() {
   const { profile } = useAuth();
   const me = profile!;
   const { data, error, loading, reload } = useLoad(async () => {
-    const [journey, streak, badges, live, spaces] = await Promise.all([
+    const [journey, streak, badges, live, spaces, news] = await Promise.all([
       loadJourney(me.id),
       sb().rpc('member_streak'),
       sb().from('member_badges').select('badges(slug, name)').eq('member_id', me.id),
       sb().from('live_sessions').select('*').gte('starts_at', new Date(Date.now() - 2 * 3600_000).toISOString()).order('starts_at').limit(1),
       sb().from('spaces').select('id, name, circle_id').not('circle_id', 'is', null).limit(1),
+      sb().from('announcements').select('id, title, body, created_at, expires_at, audience').in('audience', ['members', 'everyone']).order('created_at', { ascending: false }).limit(3),
     ]);
     const circleSpace = (spaces.data ?? [])[0] as { id: string; name: string } | undefined;
     let posts: (Post & { author: string })[] = [];
@@ -36,12 +37,13 @@ export default function Home() {
       live: ((live.data ?? []) as LiveSession[])[0] ?? null,
       circle: circleSpace ?? null,
       posts,
+      announcement: ((news.data ?? []) as { id: string; title: string; body: string; created_at: string; expires_at: string | null }[]).find((a) => !a.expires_at || new Date(a.expires_at) > new Date()) ?? null,
     };
   }, [me.id]);
 
   if (loading) return <Loading lines={6} />;
   if (error || !data) return <ErrorBox error={error ?? 'Could not load'} onRetry={reload} />;
-  const { journey, streak, badges, live, circle, posts } = data;
+  const { journey, streak, badges, live, circle, posts, announcement } = data;
 
   if (!journey.modules.length)
     return (
@@ -163,6 +165,13 @@ export default function Home() {
       </div>
 
       <aside className="stack" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {announcement && (
+          <section className="card" style={{ borderLeft: '4px solid var(--gold)' }}>
+            <p className="eyebrow">From the Academy · {timeAgo(announcement.created_at)}</p>
+            <h3>{announcement.title.replace(/^[Demo]s*/, '')}</h3>
+            <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{announcement.body}</p>
+          </section>
+        )}
         {live && (
           <section className="card card-soft">
             <p className="eyebrow">{live.is_live ? 'Live now' : liveSoon ? 'Live soon' : 'Next live session'}</p>

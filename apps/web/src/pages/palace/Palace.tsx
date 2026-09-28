@@ -228,9 +228,39 @@ export function PalaceOverview() {
               ))}
             </ul>
           </section>
+          <DemoDataCard />
         </aside>
       </div>
     </>
+  );
+}
+
+/** Sample people/posts for presentations. Removing them is one click and cannot touch real families. */
+function DemoDataCard() {
+  const { profile } = useAuth();
+  const { data, reload } = useLoad(async () => {
+    const { count } = await sb().from('profiles').select('id', { count: 'exact', head: true }).like('email', '%@demo.gritandgrace.app');
+    return count ?? 0;
+  });
+  const [msg, setMsg] = useState<string | null>(null);
+  if (!isAdmin(profile) || !data) return null;
+  async function purge() {
+    if (!confirm('Remove all demo girls, parents, mentors, posts, sessions and messages? Real accounts are not touched. This cannot be undone.')) return;
+    const { error } = await sb().rpc('purge_demo');
+    setMsg(error ? error.message : 'Demo data removed. The platform is ready for real families.');
+    reload();
+  }
+  return (
+    <section className="card" style={{ borderStyle: 'dashed' }}>
+      <p className="eyebrow">Demo mode</p>
+      <p style={{ marginTop: 0 }}>
+        {data} sample people and their posts, progress and sessions are showing so the platform looks lived-in. They cannot sign in.
+      </p>
+      {msg && <p className="notice">{msg}</p>}
+      <button className="btn btn-danger btn-block" onClick={purge}>
+        Remove demo data
+      </button>
+    </section>
   );
 }
 
@@ -451,158 +481,61 @@ export function Members() {
   );
 }
 
-export function Content() {
-  const { data, error, loading, reload } = useLoad(async () => {
-    const modules = must(await sb().from('modules').select('*').order('month_no')) as Module[];
-    const lessons = must(await sb().from('lessons').select('*').order('position')) as Lesson[];
-    return { modules, lessons };
-  });
-  const [open, setOpen] = useState<string | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
-  if (loading) return <Loading lines={8} />;
-  if (error || !data) return <ErrorBox error={error ?? 'Could not load'} onRetry={reload} />;
+type LiveRow = LiveSession & { recording_url: string | null; recording_lesson_id: string | null };
 
-  async function saveLesson(l: Lesson, patch: Partial<Lesson>) {
-    const { error } = await sb().from('lessons').update(patch).eq('id', l.id);
-    setMsg(error ? error.message : `Saved “${patch.title ?? l.title}”.`);
-    reload();
-  }
-  async function addLesson(m: Module) {
-    const pos = Math.max(0, ...data!.lessons.filter((l) => l.module_id === m.id).map((l) => l.position)) + 1;
-    const { error } = await sb().from('lessons').insert({ module_id: m.id, position: pos, title: 'New lesson', kind: 'video' });
-    setMsg(error ? error.message : null);
-    reload();
-  }
-  async function saveModule(m: Module, unlock: string) {
-    const { error } = await sb().from('modules').update({ unlock_at: unlock ? new Date(unlock).toISOString() : null }).eq('id', m.id);
-    setMsg(error ? error.message : `Month ${m.month_no} unlock date saved.`);
-    reload();
-  }
-
-  return (
-    <>
-      <h1>Content</h1>
-      <p className="muted">Upload videos to Bunny Stream, then paste the video ID here. Lessons without a video show a “coming soon” card.</p>
-      {msg && <p className="notice">{msg}</p>}
-      <div className="stack">
-        {data.modules.map((m) => {
-          const ls = data.lessons.filter((l) => l.module_id === m.id);
-          const missing = ls.filter((l) => l.kind === 'video' && !l.bunny_video_id).length;
-          return (
-            <section key={m.id} className="card">
-              <button className="spread btn-ghost" style={{ width: '100%', border: 0, background: 'none', cursor: 'pointer', minHeight: 44, color: 'inherit', font: 'inherit', textAlign: 'left' }} onClick={() => setOpen(open === m.id ? null : m.id)} aria-expanded={open === m.id}>
-                <span>
-                  <span className="eyebrow">Month {m.month_no}</span>
-                  <h3 style={{ margin: 0 }}>{m.title}</h3>
-                </span>
-                <span className="row">
-                  {missing > 0 && <Status kind="attention">{missing} without video</Status>}
-                  <span className="muted">{ls.length} lessons</span>
-                </span>
-              </button>
-              {open === m.id && (
-                <div style={{ marginTop: 12 }}>
-                  <form
-                    className="row"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      saveModule(m, String(new FormData(e.currentTarget).get('unlock') ?? ''));
-                    }}
-                  >
-                    <label className="field" style={{ flex: 1 }}>
-                      <span>Month unlocks</span>
-                      <input type="datetime-local" name="unlock" defaultValue={m.unlock_at ? m.unlock_at.slice(0, 16) : ''} />
-                    </label>
-                    <button className="btn btn-secondary" style={{ alignSelf: 'flex-end' }}>
-                      Save date
-                    </button>
-                  </form>
-                  {ls.map((l) => (
-                    <LessonEditor key={l.id} lesson={l} onSave={saveLesson} />
-                  ))}
-                  <button className="btn btn-secondary" onClick={() => addLesson(m)} style={{ marginTop: 12 }}>
-                    Add a lesson
-                  </button>
-                </div>
-              )}
-            </section>
-          );
-        })}
-      </div>
-    </>
-  );
-}
-
-function LessonEditor({ lesson: l, onSave }: { lesson: Lesson; onSave: (l: Lesson, p: Partial<Lesson>) => void }) {
-  function submit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const f = new FormData(e.currentTarget);
-    const num = (k: string) => (f.get(k) ? Number(f.get(k)) : null);
-    onSave(l, {
-      title: String(f.get('title')),
-      kind: f.get('kind') as Lesson['kind'],
-      summary: String(f.get('summary') ?? ''),
-      journal_prompt: String(f.get('journal_prompt') ?? '') || null,
-      bunny_video_id: String(f.get('bunny_video_id') ?? '').trim() || null,
-      duration_min: num('duration_min'),
-      size_mb_480p: num('size_mb_480p'),
-      unlock_at: f.get('unlock_at') ? new Date(String(f.get('unlock_at'))).toISOString() : null,
-    });
-  }
-  return (
-    <form onSubmit={submit} className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', borderTop: '1px solid var(--line)', paddingTop: 16, marginTop: 16 }}>
-      <label className="field">
-        <span>L{l.position} · Title</span>
-        <input type="text" name="title" defaultValue={l.title} required />
-      </label>
-      <label className="field">
-        <span>Kind</span>
-        <select name="kind" defaultValue={l.kind}>
-          <option value="video">Video</option>
-          <option value="devotional">Devotional</option>
-          <option value="assignment">Assignment</option>
-          <option value="live">Live</option>
-        </select>
-      </label>
-      <label className="field">
-        <span>Bunny video ID</span>
-        <input type="text" name="bunny_video_id" defaultValue={l.bunny_video_id ?? ''} placeholder="e.g. 4f1c…" />
-      </label>
-      <label className="field">
-        <span>Minutes</span>
-        <input type="number" name="duration_min" defaultValue={l.duration_min ?? ''} />
-      </label>
-      <label className="field">
-        <span>MB at 480p</span>
-        <input type="number" name="size_mb_480p" defaultValue={l.size_mb_480p ?? ''} />
-      </label>
-      <label className="field">
-        <span>Unlocks</span>
-        <input type="datetime-local" name="unlock_at" defaultValue={l.unlock_at ? l.unlock_at.slice(0, 16) : ''} />
-      </label>
-      <label className="field" style={{ gridColumn: '1 / -1' }}>
-        <span>Summary</span>
-        <textarea name="summary" defaultValue={l.summary} style={{ minHeight: 70 }} />
-      </label>
-      <label className="field" style={{ gridColumn: '1 / -1' }}>
-        <span>Journal prompt</span>
-        <input type="text" name="journal_prompt" defaultValue={l.journal_prompt ?? ''} />
-      </label>
-      <div>
-        <button className="btn btn-primary">Save lesson</button>
-      </div>
-    </form>
-  );
+/** Bunny Stream links (embed or play page) carry the video GUID — lift it so the replay plays inside a lesson. */
+function bunnyGuid(url: string) {
+  return url.match(/(?:mediadelivery\.net|bunnycdn\.com)\/(?:embed|play)\/[^/]+\/([0-9a-f-]{36})/i)?.[1] ?? null;
 }
 
 export function LiveAdmin() {
   const { data, error, loading, reload } = useLoad(async () => {
-    const sessions = must(await sb().from('live_sessions').select('*').order('starts_at', { ascending: false }).limit(30)) as LiveSession[];
+    const sessions = must(await sb().from('live_sessions').select('*').order('starts_at', { ascending: false }).limit(30)) as LiveRow[];
     const circles = must(await sb().from('circles').select('id, name').order('name')) as { id: string; name: string }[];
-    return { sessions, circles };
+    const modules = must(await sb().from('modules').select('id, month_no, title').order('month_no')) as Pick<Module, 'id' | 'month_no' | 'title'>[];
+    return { sessions, circles, modules };
   });
   const { profile } = useAuth();
   const [msg, setMsg] = useState<string | null>(null);
+  const [rec, setRec] = useState<string | null>(null);
+  const [recMsg, setRecMsg] = useState<string | null>(null);
+
+  async function saveRecording(s: LiveRow, e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const url = String(f.get('recording_url') ?? '').trim();
+    const moduleId = String(f.get('module_id') ?? '');
+    if (url && !/^https:\/\//i.test(url)) return setRecMsg('Paste the full replay link, starting with https://');
+    setRecMsg(null);
+    const patch: Record<string, unknown> = { recording_url: url || null };
+    if (url && moduleId) {
+      const { data: last } = await sb().from('lessons').select('position').eq('module_id', moduleId).order('position', { ascending: false }).limit(1);
+      const position = ((last?.[0] as { position: number } | undefined)?.position ?? 0) + 1;
+      const guid = bunnyGuid(url);
+      const day = new Date(s.starts_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+      const { data: lesson, error: le } = await sb()
+        .from('lessons')
+        .insert({
+          module_id: moduleId,
+          position,
+          kind: 'video',
+          title: s.title,
+          summary: `Recording of the live session on ${day}${s.host_name ? ` with ${s.host_name}` : ''}.`,
+          body: guid ? '' : `Watch the replay: ${url}`,
+          bunny_video_id: guid,
+          video_status: guid ? 'ready' : null,
+        })
+        .select('id')
+        .single();
+      if (le) return setRecMsg(le.message);
+      patch.recording_lesson_id = (lesson as { id: string }).id;
+    }
+    const { error } = await sb().from('live_sessions').update(patch).eq('id', s.id);
+    if (error) return setRecMsg(error.message);
+    setRec(null);
+    setMsg(url ? (moduleId ? 'Recording saved and added as a lesson — finish it in the Course studio.' : 'Recording saved. Girls can watch the replay from the Throne Room.') : 'Recording removed.');
+    reload();
+  }
 
   async function create(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -635,29 +568,81 @@ export function LiveAdmin() {
         <h1>Live sessions</h1>
         {loading && <Loading />}
         {error && <ErrorBox error={error} onRetry={reload} />}
+        {msg && <p className="notice">{msg}</p>}
         <div className="stack">
           {data?.sessions.map((s) => (
-            <article key={s.id} className="card spread">
-              <div>
-                {s.is_live && <span className="live-badge">Live</span>} <strong>{s.title}</strong>
-                <div className="muted">
-                  {when(s.starts_at)} · {s.kind === 'broadcast' ? 'Broadcast (YouTube)' : `Interactive (Jitsi)${s.circle_id ? ` · ${data.circles.find((c) => c.id === s.circle_id)?.name ?? ''}` : ''}`}
+            <article key={s.id} className="card">
+              <div className="spread" style={{ flexWrap: 'wrap' }}>
+                <div>
+                  {s.is_live && <span className="live-badge">Live</span>} <strong>{s.title}</strong>
+                  <div className="muted">
+                    {when(s.starts_at)} · {s.kind === 'broadcast' ? 'Broadcast (YouTube)' : `Interactive (Jitsi)${s.circle_id ? ` · ${data.circles.find((c) => c.id === s.circle_id)?.name ?? ''}` : ''}`}
+                  </div>
+                  {s.recording_url && (
+                    <div className="row" style={{ marginTop: 6 }}>
+                      <Status kind="complete">Replay added</Status>
+                      {s.recording_lesson_id && <Link to="/palace/content">Also a lesson</Link>}
+                    </div>
+                  )}
+                </div>
+                <div className="row">
+                  {!s.is_live && new Date(s.starts_at) < new Date() && (
+                    <button
+                      className="btn btn-ghost"
+                      aria-expanded={rec === s.id}
+                      onClick={() => {
+                        setRec(rec === s.id ? null : s.id);
+                        setRecMsg(null);
+                      }}
+                    >
+                      {s.recording_url ? 'Edit recording' : 'Add recording'}
+                    </button>
+                  )}
+                  <Link className="btn btn-secondary" to={`/app/live/${s.id}`}>
+                    Open room
+                  </Link>
+                  {s.is_live ? (
+                    <button className="btn btn-danger" onClick={() => setLive(s, false)}>
+                      End for all
+                    </button>
+                  ) : (
+                    <button className="btn btn-primary" onClick={() => setLive(s, true)}>
+                      Go live
+                    </button>
+                  )}
                 </div>
               </div>
-              <div className="row">
-                <Link className="btn btn-secondary" to={`/app/live/${s.id}`}>
-                  Open room
-                </Link>
-                {s.is_live ? (
-                  <button className="btn btn-danger" onClick={() => setLive(s, false)}>
-                    End for all
-                  </button>
-                ) : (
-                  <button className="btn btn-primary" onClick={() => setLive(s, true)}>
-                    Go live
-                  </button>
-                )}
-              </div>
+              {rec === s.id && (
+                <form className="stack" onSubmit={(e) => saveRecording(s, e)} style={{ borderTop: '1px solid var(--line)', marginTop: 16, paddingTop: 16 }}>
+                  <label className="field">
+                    <span>Replay link (YouTube or Bunny Stream)</span>
+                    <input type="url" name="recording_url" defaultValue={s.recording_url ?? ''} placeholder="https://youtu.be/… or https://iframe.mediadelivery.net/embed/…" />
+                  </label>
+                  {isAdmin(profile) && !s.recording_lesson_id && (
+                    <label className="field">
+                      <span>Also turn it into a lesson (optional)</span>
+                      <select name="module_id" defaultValue="">
+                        <option value="">No — just the replay</option>
+                        {data.modules.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            Add to Month {m.month_no} — {m.title}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  <p className="muted small" style={{ margin: 0 }}>
+                    Bunny links play inside the lesson. YouTube links show as “Watch the replay”. Empty the link and save to remove it.
+                  </p>
+                  {recMsg && <p className="error">{recMsg}</p>}
+                  <div className="row">
+                    <button className="btn btn-primary">Save recording</button>
+                    <button type="button" className="btn btn-ghost" onClick={() => setRec(null)}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
             </article>
           ))}
           {data?.sessions.length === 0 && <Empty>No sessions yet.</Empty>}
@@ -666,7 +651,6 @@ export function LiveAdmin() {
       <aside>
         <form className="card stack" onSubmit={create}>
           <h3>Schedule a session</h3>
-          {msg && <p className="notice">{msg}</p>}
           <label className="field">
             <span>Title</span>
             <input type="text" name="title" required placeholder="Circle 4 · Mentor hour" />
@@ -926,7 +910,14 @@ export function People() {
     e.preventDefault();
     const form = e.currentTarget;
     const f = new FormData(form);
-    const { error } = await sb().from('announcements').insert({ author_id: profile!.id, title: String(f.get('title')), body: String(f.get('body')) });
+    const days = Number(f.get('days') || 0);
+    const { error } = await sb().from('announcements').insert({
+      author_id: profile!.id,
+      title: String(f.get('title')),
+      body: String(f.get('body')),
+      audience: String(f.get('audience') || 'members'),
+      expires_at: days ? new Date(Date.now() + days * 86_400_000).toISOString() : null,
+    });
     setMsg(error ? error.message : 'Announcement posted.');
     form.reset();
   }
@@ -1000,6 +991,17 @@ export function People() {
           <form className="stack" onSubmit={announce}>
             <input type="text" name="title" placeholder="Title" required />
             <textarea name="body" placeholder="What does everyone need to know?" required />
+            <select name="audience" defaultValue="members" aria-label="Who sees it">
+              <option value="members">Girls (member home)</option>
+              <option value="parents">Parents (The Gate)</option>
+              <option value="everyone">Everyone</option>
+            </select>
+            <select name="days" defaultValue="14" aria-label="Show for">
+              <option value="7">Show for 1 week</option>
+              <option value="14">Show for 2 weeks</option>
+              <option value="30">Show for a month</option>
+              <option value="0">Until I remove it</option>
+            </select>
             <button className="btn btn-primary">
               <Icon name="megaphone" size={18} /> Post announcement
             </button>

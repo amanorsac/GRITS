@@ -1,16 +1,23 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { Icon } from '../../components/ui';
-import { BLOG, CONTACT, FOUNDER, FOUNDRY, INNER_COURT, MISSION, PILLARS, TAGLINES, VALUES, VISION } from '../../content/academy';
+import { Icon, Loading } from '../../components/ui';
 import { ghs, monthsLeft, priceFor } from '../../lib/format';
-import type { Program } from '../../lib/types';
-import { eventDate } from './Home';
-import { PageHero, SiteShell, useSiteData } from './Shell';
+import { safeHref } from '../../lib/media';
+import { longDate, useSite, type SiteProgram } from '../../lib/site';
+import { eventDate, useArticles, ValueGrid } from './Home';
+import { Cover, FounderPortrait, PageHero, RegisterLink, SiteShell, telOf, useSiteData } from './Shell';
 
 export function About() {
+  const FOUNDRY = useSite('foundry');
+  const VISION = useSite('vision');
+  const MISSION = useSite('mission');
+  const PILLARS = useSite('pillars');
+  const VALUES = useSite('values');
+  const FOUNDER = useSite('founder');
+  const TAGLINES = useSite('taglines');
   return (
-    <SiteShell>
-      <PageHero eyebrow="Who we are" title={FOUNDRY.title}>
+    <SiteShell title="About">
+      <PageHero eyebrow={FOUNDRY.eyebrow} title={FOUNDRY.title}>
         <p>{FOUNDRY.lead}</p>
       </PageHero>
 
@@ -34,9 +41,9 @@ export function About() {
           <p className="eyebrow">The foundation</p>
           <h2>The Five Pillars</h2>
           <p className="muted">The pillars that form the foundation of every royal daughter.</p>
-          {PILLARS.map((p) => (
-            <div key={p.name} className="pillar">
-              <b>{p.n}</b>
+          {PILLARS.map((p, i) => (
+            <div key={i} className="pillar">
+              <b>{p.n || String(i + 1).padStart(2, '0')}</b>
               <div>
                 <h3 style={{ marginBottom: 2 }}>{p.name}</h3>
                 <div className="sub">{p.sub}</div>
@@ -53,38 +60,25 @@ export function About() {
             The G.I.R.L.S. values
           </p>
           <h2>The essence of who she becomes</h2>
-          <div className="value-grid">
-            {VALUES.map((v) => (
-              <article key={v.name} className="value-card">
-                <div className="letter" aria-hidden="true">
-                  {v.letter}
-                </div>
-                <h3>{v.name}</h3>
-                <div className="sub">{v.sub}</div>
-                {v.lines.map((l) => (
-                  <p key={l}>{l}</p>
-                ))}
-              </article>
-            ))}
-          </div>
+          <ValueGrid values={VALUES} />
         </div>
       </section>
 
       <section className="section">
         <div className="section-inner founder-v2">
-          <div className="portrait">[FOUNDER PORTRAIT]</div>
+          <FounderPortrait />
           <div>
             <p className="eyebrow">Meet the founder</p>
             <h2>{FOUNDER.name}</h2>
             <p className="muted" style={{ fontWeight: 600 }}>
               {FOUNDER.title}
-              <br />
+              {FOUNDER.title && FOUNDER.credentials && <br />}
               {FOUNDER.credentials}
             </p>
-            {FOUNDER.bio.map((p) => (
-              <p key={p.slice(0, 20)}>{p}</p>
+            {FOUNDER.bio.map((p, i) => (
+              <p key={i}>{p}</p>
             ))}
-            <blockquote>“{FOUNDER.quote}”</blockquote>
+            {FOUNDER.quote && <blockquote>“{FOUNDER.quote}”</blockquote>}
             <p className="serif" style={{ marginTop: 24, color: 'var(--maroon)' }}>
               {TAGLINES.signature}
             </p>
@@ -98,7 +92,7 @@ export function About() {
   );
 }
 
-function ProgramCard({ p }: { p: Program }) {
+function ProgramCard({ p }: { p: SiteProgram }) {
   const price = priceFor(p);
   const cta =
     p.slug === 'inner-court'
@@ -106,6 +100,7 @@ function ProgramCard({ p }: { p: Program }) {
       : { to: `/contact?topic=${p.slug}&subject=${encodeURIComponent(p.name)}`, label: p.slug === 'hershift' ? 'Join the waitlist' : p.slug === 'counselling' ? 'Book a session' : p.slug === 'royal-table' ? 'Book a table' : 'Enquire' };
   return (
     <article className={`card program-card${p.slug === 'inner-court' ? ' featured' : ''}`} id={p.slug}>
+      <Cover url={p.cover_url} />
       <div className="spread">
         <span className={`status ${p.is_open ? 'status-complete' : 'status-attention'}`}>{p.is_open ? p.duration_label : 'Waitlist open'}</span>
         <span className="muted">{p.audience}</span>
@@ -138,10 +133,12 @@ function ProgramCard({ p }: { p: Program }) {
 
 export function Programs() {
   const data = useSiteData();
+  const INNER_COURT = useSite('inner_court');
+  const P = useSite('pages');
   return (
-    <SiteShell>
-      <PageHero eyebrow={INNER_COURT.eyebrow} title="Programs & services">
-        <p>From a year-long journey for girls to a rite of passage for women — every program is built on the Five Pillars and the G.I.R.L.S. values.</p>
+    <SiteShell title="Programs">
+      <PageHero eyebrow={INNER_COURT.eyebrow} title={P.programsTitle}>
+        <p>{P.programsText}</p>
       </PageHero>
       <section className="section">
         <div className="section-inner">
@@ -151,19 +148,21 @@ export function Programs() {
             </p>
             <h2 style={{ color: '#fff' }}>{INNER_COURT.title}</h2>
             <p style={{ color: '#f5dbe5', maxWidth: 720 }}>{INNER_COURT.summons}</p>
-            <p className="serif" style={{ color: 'var(--gold)', fontSize: '1.25rem' }}>
-              “{INNER_COURT.quote}”
-            </p>
+            {INNER_COURT.quote && (
+              <p className="serif" style={{ color: 'var(--gold)', fontSize: '1.25rem' }}>
+                “{INNER_COURT.quote}”
+              </p>
+            )}
             <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginTop: 16 }}>
-              {INNER_COURT.focus.map((f) => (
-                <div key={f.name}>
+              {INNER_COURT.focus.map((f, i) => (
+                <div key={i}>
                   <strong style={{ color: '#fff' }}>{f.name}</strong>
                   <div style={{ color: '#f1d4de' }}>{f.text}</div>
                 </div>
               ))}
             </div>
             <p style={{ color: '#f1d4de', marginTop: 20, marginBottom: 0 }}>
-              {INNER_COURT.ages} · {INNER_COURT.proRataNote}
+              {[INNER_COURT.ages, INNER_COURT.proRataNote].filter(Boolean).join(' · ')}
             </p>
           </div>
           <div className="program-grid">{data?.programs.map((p) => <ProgramCard key={p.slug} p={p} />)}</div>
@@ -175,14 +174,15 @@ export function Programs() {
 
 export function Events() {
   const data = useSiteData();
+  const P = useSite('pages');
   const now = Date.now();
   const upcoming = (data?.events ?? []).filter((e) => !e.starts_at || new Date(e.starts_at).getTime() > now);
   const past = (data?.events ?? []).filter((e) => e.starts_at && new Date(e.starts_at).getTime() <= now);
   const program = (slug: string | null) => data?.programs.find((p) => p.slug === slug);
   return (
-    <SiteShell>
-      <PageHero eyebrow="Grit & Grace Academy presents" title="Events">
-        <p>Summits three times a year, the father–daughter Royal Table, and the Crown Council for everyone raising Ghana’s daughters.</p>
+    <SiteShell title="Events">
+      <PageHero eyebrow={P.eventsEyebrow} title={P.eventsTitle}>
+        <p>{P.eventsText}</p>
       </PageHero>
       <section className="section">
         <div className="section-inner stack" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -190,35 +190,36 @@ export function Events() {
           {upcoming.map((e) => {
             const p = program(e.program_slug);
             return (
-              <article key={e.id} className="card" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
-                <div>
-                  <p className="eyebrow">Upcoming</p>
-                  <h2 style={{ marginBottom: 4 }}>{e.title}</h2>
-                  <p className="serif" style={{ fontSize: '1.2rem', color: 'var(--pink)' }}>
-                    {e.tagline}
-                  </p>
-                  <p>{e.description}</p>
-                </div>
-                <div className="card" style={{ background: 'var(--surface-2)' }}>
-                  <p className="eyebrow">Event logistics</p>
-                  <p style={{ margin: '0 0 6px' }}>
-                    <strong>When:</strong> {eventDate(e)}
-                  </p>
-                  {e.venue && (
-                    <p style={{ margin: '0 0 6px' }}>
-                      <strong>Where:</strong> {e.venue}
+              <article key={e.id} className={`card event-card${e.cover_url ? ' has-cover' : ''}`}>
+                <Cover url={e.cover_url} className="event-cover" />
+                <div className="event-card-body">
+                  <div>
+                    <p className="eyebrow">Upcoming</p>
+                    <h2 style={{ marginBottom: 4 }}>{e.title}</h2>
+                    <p className="serif" style={{ fontSize: '1.2rem', color: 'var(--pink)' }}>
+                      {e.tagline}
                     </p>
-                  )}
-                  {p && p.inclusions.length > 0 && (
-                    <ul style={{ paddingLeft: 20 }}>
-                      {p.inclusions.map((i) => (
-                        <li key={i}>{i}</li>
-                      ))}
-                    </ul>
-                  )}
-                  <Link to={`/contact?topic=${e.program_slug ?? 'enquiry'}&subject=${encodeURIComponent(e.title)}`} className="btn btn-primary btn-block">
-                    Register interest
-                  </Link>
+                    <p>{e.description}</p>
+                  </div>
+                  <div className="card" style={{ background: 'var(--surface-2)' }}>
+                    <p className="eyebrow">Event logistics</p>
+                    <p style={{ margin: '0 0 6px' }}>
+                      <strong>When:</strong> {eventDate(e)}
+                    </p>
+                    {e.venue && (
+                      <p style={{ margin: '0 0 6px' }}>
+                        <strong>Where:</strong> {e.venue}
+                      </p>
+                    )}
+                    {p && p.inclusions.length > 0 && (
+                      <ul style={{ paddingLeft: 20 }}>
+                        {p.inclusions.map((i) => (
+                          <li key={i}>{i}</li>
+                        ))}
+                      </ul>
+                    )}
+                    <RegisterLink event={e} className="btn btn-primary btn-block" />
+                  </div>
                 </div>
               </article>
             );
@@ -237,7 +238,8 @@ export function Events() {
                   <div>
                     <strong>{e.title}</strong> — {e.tagline}
                     <div className="muted">
-                      {eventDate(e)} · {e.venue}
+                      {eventDate(e)}
+                      {e.venue ? ` · ${e.venue}` : ''}
                     </div>
                   </div>
                 </div>
@@ -251,33 +253,42 @@ export function Events() {
 }
 
 export function Journal() {
+  const P = useSite('pages');
+  const { list, error } = useArticles();
   return (
-    <SiteShell>
-      <PageHero eyebrow="Stories & insights" title="Wisdom for raising Queens">
-        <p>Practical articles on mentoring, parenting, faith, and empowering the next generation of purpose-driven girls.</p>
+    <SiteShell title="Journal">
+      <PageHero eyebrow={P.journalEyebrow} title={P.journalTitle}>
+        <p>{P.journalText}</p>
       </PageHero>
       <section className="section">
         <div className="section-inner">
+          {!list && !error && <Loading lines={4} />}
+          {error && <p className="muted">The journal could not be loaded just now. Please try again in a moment.</p>}
+          {list && list.length === 0 && <p className="muted">New articles are on their way.</p>}
           <div className="blog-grid">
-            {BLOG.map((b) => (
-              <a key={b.title} href={`${CONTACT.legacySite}/blog`} target="_blank" rel="noreferrer" className="card blog-card">
-                <div className="cover" aria-hidden="true">
-                  <span className="serif" style={{ fontSize: '2.4rem', color: 'var(--maroon)' }}>
-                    {b.title[0]}
-                  </span>
-                </div>
+            {list?.map((b) => (
+              <Link key={b.id} to={`/journal/${b.slug}`} className="card blog-card">
+                {b.cover_url ? (
+                  <Cover url={b.cover_url} className="blog-cover-img" />
+                ) : (
+                  <div className="cover" aria-hidden="true">
+                    <span className="serif" style={{ fontSize: '2.4rem', color: 'var(--maroon)' }}>
+                      {b.title[0]}
+                    </span>
+                  </div>
+                )}
                 <div className="spread">
                   <span className="eyebrow" style={{ margin: 0 }}>
                     {b.tag}
                   </span>
-                  <span className="muted small">{new Date(b.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                  <span className="muted small">{longDate(b.published_at ?? b.created_at)}</span>
                 </div>
                 <h3>{b.title}</h3>
                 <p className="muted" style={{ margin: 0 }}>
                   {b.excerpt}
                 </p>
                 <span style={{ color: 'var(--primary)', fontWeight: 600 }}>Read more →</span>
-              </a>
+              </Link>
             ))}
           </div>
         </div>
@@ -307,6 +318,9 @@ export function Contact() {
     message: '',
     website: '',
   });
+  const CONTACT = useSite('contact');
+  const P = useSite('pages');
+  const ig = safeHref(CONTACT.instagram.url);
   const [state, setState] = useState<'idle' | 'busy' | 'sent' | string>('idle');
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setForm({ ...form, [k]: e.target.value });
 
@@ -323,9 +337,9 @@ export function Contact() {
   }
 
   return (
-    <SiteShell>
-      <PageHero eyebrow="Get in touch" title="We’d love to hear from you">
-        <p>Questions about our mentoring programs, upcoming summits, counselling, or how you can support the Academy — our team is ready to connect.</p>
+    <SiteShell title="Contact">
+      <PageHero eyebrow={P.contactEyebrow} title={P.contactTitle}>
+        <p>{P.contactText}</p>
       </PageHero>
       <section className="section">
         <div className="section-inner contact-grid">
@@ -345,9 +359,9 @@ export function Contact() {
               </div>
               <div>
                 <strong>Phone</strong>
-                {CONTACT.phones.map((p) => (
-                  <div key={p.tel}>
-                    <a href={`tel:${p.tel}`}>{p.label}</a>
+                {CONTACT.phones.map((p, i) => (
+                  <div key={i}>
+                    <a href={`tel:${telOf(p)}`}>{p.label}</a>
                   </div>
                 ))}
               </div>
@@ -370,9 +384,13 @@ export function Contact() {
               <div>
                 <strong>Instagram</strong>
                 <div>
-                  <a href={CONTACT.instagram.url} target="_blank" rel="noreferrer">
-                    {CONTACT.instagram.handle}
-                  </a>
+                  {ig ? (
+                    <a href={ig} target="_blank" rel="noreferrer">
+                      {CONTACT.instagram.handle}
+                    </a>
+                  ) : (
+                    CONTACT.instagram.handle
+                  )}
                 </div>
               </div>
             </div>

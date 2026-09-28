@@ -21,17 +21,15 @@
   // Daily at 03:00 GMT — keeps the free Supabase project from pausing.
   "triggers": { "crons": ["0 3 * * *"] },
   "vars": {
+    // Only values that must never change live here — anything listed in this file overwrites the
+    // dashboard on every git deploy.
     "SUPABASE_URL": "https://ckwzixmsyfgonqiayltb.supabase.co",
-    // Empty = use the origin the request came in on. Set once the custom domain is live.
-    "APP_ORIGIN": "",
-    "MEMBER_EMAIL_DOMAIN": "members.gritandgrace.app",
-    "SAFEGUARDING_EMAIL": "grace@gritgracegirlsacademy.com",
-    "EMAIL_FROM": "Grit & Grace <hello@gritgracegirlsacademy.com>",
-    "BUNNY_LIBRARY_ID": "",
-    "JAAS_APP_ID": "",
-    "JAAS_KEY_ID": ""
+    "MEMBER_EMAIL_DOMAIN": "members.gritandgrace.app"
   }
+  // Editable in the dashboard (Settings → Variables, plain text), with defaults in worker/index.ts:
+  //   APP_ORIGIN (default: the URL the request came in on), SAFEGUARDING_EMAIL, EMAIL_FROM,
+  //   BUNNY_LIBRARY_ID, JAAS_APP_ID, JAAS_KEY_ID.
   // Secrets — set with `npx wrangler secret put <NAME>` or in the dashboard (Settings → Variables):
   //   SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, PAYSTACK_SECRET_KEY, OPENAI_API_KEY,
-  //   BUNNY_TOKEN_KEY, JAAS_PRIVATE_KEY, RESEND_API_KEY
+  //   BUNNY_TOKEN_KEY, BUNNY_API_KEY, JAAS_PRIVATE_KEY, RESEND_API_KEY
 }

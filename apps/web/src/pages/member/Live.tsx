@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { Empty, ErrorBox, Icon, Loading, Switch } from '../../components/ui';
 import { api } from '../../lib/api';
@@ -7,7 +7,39 @@ import { useLoad } from '../../lib/hooks';
 import { sb } from '../../lib/supabase';
 import type { LiveSession } from '../../lib/types';
 
+type WithReplay = LiveSession & { recording_url?: string | null };
+
+/** YouTube links in any common shape → the video ID, so replays embed on the privacy-enhanced domain. */
+function youtubeId(url: string) {
+  return url.match(/(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|live\/|shorts\/)|youtu\.be\/)([\w-]{11})/i)?.[1] ?? null;
+}
+
+export function Replay({ session }: { session: WithReplay }) {
+  const url = session.recording_url;
+  if (!url) return null;
+  const yt = youtubeId(url);
+  if (yt) {
+    return (
+      <div className="live-stage">
+        <iframe
+          src={`https://www.youtube-nocookie.com/embed/${yt}?rel=0&modestbranding=1&playsinline=1`}
+          title={`Replay: ${session.title}`}
+          loading="lazy"
+          allow="encrypted-media; picture-in-picture; fullscreen"
+          allowFullScreen
+        />
+      </div>
+    );
+  }
+  return (
+    <a className="btn btn-primary" href={url} target="_blank" rel="noopener noreferrer">
+      <Icon name="play" size={18} /> Watch the replay
+    </a>
+  );
+}
+
 export function LiveList() {
+  const replays = useRef<WithReplay[]>([]);
   const { data, error, loading, reload } = useLoad(async () => {
     const { data, error } = await sb()
       .from('live_sessions')
@@ -16,6 +48,15 @@ export function LiveList() {
       .order('starts_at')
       .limit(20);
     if (error) throw error;
+    // Finished sessions that have a replay link.
+    const past = await sb()
+      .from('live_sessions')
+      .select('*')
+      .lt('starts_at', new Date(Date.now() - 3 * 3600_000).toISOString())
+      .not('recording_url', 'is', null)
+      .order('starts_at', { ascending: false })
+      .limit(12);
+    replays.current = (past.data ?? []) as WithReplay[];
     return data as LiveSession[];
   });
   return (
@@ -39,6 +80,24 @@ export function LiveList() {
           </Link>
         ))}
       </div>
+      {!!replays.current.length && (
+        <section style={{ marginTop: 32 }}>
+          <h2>Watch the replay</h2>
+          <p className="muted">Missed a session? Catch up here.</p>
+          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', marginTop: 16 }}>
+            {replays.current.map((s) => (
+              <Link key={s.id} to={`/app/live/${s.id}`} className="card" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <span className="eyebrow">Replay</span>
+                <h3 style={{ marginTop: 8 }}>{s.title}</h3>
+                <p className="muted" style={{ margin: 0 }}>
+                  {new Date(s.starts_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', timeZone: 'UTC' })}
+                  {s.host_name ? ` · ${s.host_name}` : ''}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </>
   );
 }
@@ -48,7 +107,7 @@ export function LiveRoom() {
   const { data: s, error, loading, reload } = useLoad(async () => {
     const { data, error } = await sb().from('live_sessions').select('*').eq('id', sessionId!).single();
     if (error) throw error;
-    return data as LiveSession;
+    return data as WithReplay;
   }, [sessionId]);
   const [audioOnly, setAudioOnly] = useState(false);
   const [room, setRoom] = useState<{ provider: string; url: string } | null>(null);
@@ -70,6 +129,26 @@ export function LiveRoom() {
   if (loading) return <Loading />;
   if (error || !s) return <ErrorBox error={error ?? 'Session not found'} onRetry={reload} />;
   const started = new Date(s.starts_at) < new Date();
+  const over = !s.is_live && (!!s.ends_at || new Date(s.starts_at).getTime() < Date.now() - 3 * 3600_000);
+
+  if (over && s.recording_url) {
+    return (
+      <div className="stack" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <Link to="/app/live" className="row" style={{ textDecoration: 'none' }}>
+          <Icon name="back" size={18} /> The Throne Room
+        </Link>
+        <div>
+          <span className="eyebrow">Replay</span>
+          <h1 style={{ marginTop: 8 }}>{s.title}</h1>
+          <p className="muted" style={{ margin: 0 }}>
+            {s.host_name ?? 'The Academy'} · {new Date(s.starts_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', timeZone: 'UTC' })}
+          </p>
+        </div>
+        <Replay session={s} />
+        <p className="muted small" style={{ margin: 0 }}>Replays use data like any video. On a small bundle, watch on Wi-Fi.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="stack" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

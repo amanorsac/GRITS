@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { Crown, Empty, ErrorBox, Icon, Loading, Status, Switch } from '../components/ui';
 import { api } from '../lib/api';
-import { useAuth } from '../lib/auth';
+import { isStaff, useAuth } from '../lib/auth';
 import { ghs } from '../lib/format';
 import { useLoad } from '../lib/hooks';
 import { sb } from '../lib/supabase';
@@ -101,9 +101,15 @@ export default function Gate() {
           <button className="chip" aria-pressed={tab === 'permissions'} onClick={() => setTab('permissions')}>
             Permissions
           </button>
-          <button className="linkish" style={{ color: '#fff' }} onClick={signOut}>
-            Log out
-          </button>
+          {isStaff(profile) ? (
+            <Link to="/palace" className="chip">
+              Back to The Palace
+            </Link>
+          ) : (
+            <button className="linkish" style={{ color: '#fff' }} onClick={signOut}>
+              Log out
+            </button>
+          )}
         </nav>
       </header>
       <main className="section-inner" style={{ padding: '32px 16px 64px' }}>

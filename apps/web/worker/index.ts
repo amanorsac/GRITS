@@ -7,6 +7,7 @@ import enrol from './routes/enrol';
 import media from './routes/media';
 import adminRoutes from './routes/admin';
 import site from './routes/site';
+import studio from './routes/studio';
 
 const api = new Hono<AppEnv>().basePath('/api');
 
@@ -24,6 +25,7 @@ api.route('/', enrol);
 api.route('/', media);
 api.route('/', site);
 api.route('/admin', adminRoutes);
+api.route('/admin', studio);
 
 api.notFound((c) => c.json({ error: 'Not found' }, 404));
 api.onError((err, c) => {
@@ -35,7 +37,10 @@ api.onError((err, c) => {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // Defaults for settings the Academy can override in the dashboard.
     if (!env.APP_ORIGIN) env.APP_ORIGIN = url.origin;
+    env.SAFEGUARDING_EMAIL ||= 'grace@gritgracegirlsacademy.com';
+    env.EMAIL_FROM ||= 'Grit & Grace <hello@gritgracegirlsacademy.com>';
     if (url.pathname.startsWith('/api/')) return api.fetch(request, env, ctx);
     return env.ASSETS.fetch(request);
   },

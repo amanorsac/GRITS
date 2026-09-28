@@ -5,7 +5,7 @@ export interface Env {
   // vars (wrangler.jsonc)
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY?: string;
-  APP_ORIGIN: string;
+  APP_ORIGIN: string; // optional in the dashboard; defaulted per request
   MEMBER_EMAIL_DOMAIN: string;
   SAFEGUARDING_EMAIL: string;
   EMAIL_FROM: string;
@@ -17,6 +17,8 @@ export interface Env {
   PAYSTACK_SECRET_KEY?: string;
   OPENAI_API_KEY?: string;
   BUNNY_TOKEN_KEY?: string;
+  /** Bunny Stream library API key — creates videos and signs TUS uploads. Never sent to the browser. */
+  BUNNY_API_KEY?: string;
   JAAS_PRIVATE_KEY?: string;
   RESEND_API_KEY?: string;
   ZOHO_FLOW_WEBHOOK_URL?: string;

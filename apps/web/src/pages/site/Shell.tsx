@@ -1,10 +1,10 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router';
 import { Crown, Icon } from '../../components/ui';
-import { CONTACT, TAGLINES } from '../../content/academy';
 import { homeFor, useAuth } from '../../lib/auth';
+import { safeHref } from '../../lib/media';
+import { useSite, type SiteEvent, type SiteProgram } from '../../lib/site';
 import { sb } from '../../lib/supabase';
-import type { AcademyEvent, Program } from '../../lib/types';
 
 const NAV = [
   ['/', 'Home'],
@@ -12,8 +12,30 @@ const NAV = [
   ['/programs', 'Programs'],
   ['/events', 'Events'],
   ['/journal', 'Journal'],
+  ['/gallery', 'Gallery'],
   ['/contact', 'Contact'],
 ] as const;
+
+/** An optional one-line notice above the header, switched on in The Palace. */
+export function AnnouncementBar() {
+  const a = useSite('announcement_bar');
+  if (!a.enabled || !a.text.trim()) return null;
+  const href = safeHref(a.link);
+  const label = a.linkLabel.trim() || 'Find out more';
+  return (
+    <div className="announcement" role="region" aria-label="Announcement">
+      <span>{a.text}</span>
+      {href &&
+        (href.startsWith('/') ? (
+          <Link to={href}>{label} →</Link>
+        ) : (
+          <a href={href} target="_blank" rel="noreferrer">
+            {label} →
+          </a>
+        ))}
+    </div>
+  );
+}
 
 export function SiteHeader() {
   const { profile } = useAuth();
@@ -69,6 +91,9 @@ export function SiteHeader() {
 }
 
 export function SiteFooter() {
+  const TAGLINES = useSite('taglines');
+  const CONTACT = useSite('contact');
+  const ig = safeHref(CONTACT.instagram.url);
   return (
     <footer className="footer-v2">
       <div className="cols">
@@ -87,6 +112,7 @@ export function SiteFooter() {
           <Link to="/programs">Programs</Link>
           <Link to="/events">Events</Link>
           <Link to="/journal">Journal</Link>
+          <Link to="/gallery">Gallery</Link>
         </div>
         <div>
           <h4>Families</h4>
@@ -97,15 +123,17 @@ export function SiteFooter() {
         </div>
         <div>
           <h4>Contact</h4>
-          <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
-          {CONTACT.phones.map((p) => (
-            <a key={p.tel} href={`tel:${p.tel}`}>
+          {CONTACT.email && <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>}
+          {CONTACT.phones.map((p, i) => (
+            <a key={i} href={`tel:${telOf(p)}`}>
               {p.label}
             </a>
           ))}
-          <a href={CONTACT.instagram.url} target="_blank" rel="noreferrer">
-            Instagram {CONTACT.instagram.handle}
-          </a>
+          {ig && (
+            <a href={ig} target="_blank" rel="noreferrer">
+              Instagram {CONTACT.instagram.handle}
+            </a>
+          )}
           <span style={{ display: 'block', paddingTop: 6 }}>{CONTACT.location}</span>
         </div>
       </div>
@@ -139,16 +167,27 @@ export function TalkToUs() {
   );
 }
 
-export function SiteShell({ children }: { children: ReactNode }) {
+/** A phone's dialable number: the saved one, or the digits of its label. */
+export function telOf(p: { label: string; tel: string }) {
+  return (p.tel || p.label).replace(/[^\d+]/g, '');
+}
+
+export function SiteShell({ children, title }: { children: ReactNode; title?: string }) {
   const { pathname } = useLocation();
+  const seo = useSite('seo');
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);
+  useEffect(() => {
+    document.title = title ? `${title} · Grit & Grace Girls Academy` : seo.title;
+    document.querySelector('meta[name="description"]')?.setAttribute('content', seo.description);
+  }, [title, seo.title, seo.description]);
   return (
     <>
       <a href="#content" className="skip">
         Skip to content
       </a>
+      <AnnouncementBar />
       <SiteHeader />
       <main id="content">{children}</main>
       <SiteFooter />
@@ -170,17 +209,23 @@ export function PageHero({ eyebrow, title, children }: { eyebrow: string; title:
 }
 
 /** Programs and events are public (RLS allows anon read), cached for the session. */
-let cache: Promise<{ programs: Program[]; events: AcademyEvent[] }> | null = null;
+let cache: Promise<{ programs: SiteProgram[]; events: SiteEvent[] }> | null = null;
 export function loadSiteData() {
   cache ??= Promise.all([
     sb().from('programs').select('*').order('position'),
-    sb().from('events').select('*').order('starts_at', { ascending: true, nullsFirst: false }),
-  ]).then(([p, e]) => ({ programs: (p.data ?? []) as Program[], events: (e.data ?? []) as AcademyEvent[] }));
+    // Admins can read drafts through RLS, so ask for published events explicitly.
+    sb().from('events').select('*').eq('is_published', true).order('starts_at', { ascending: true, nullsFirst: false }),
+  ]).then(([p, e]) => ({ programs: (p.data ?? []) as SiteProgram[], events: (e.data ?? []) as SiteEvent[] }));
   return cache;
 }
 
+/** The Palace calls this after editing programs or events so the site shows the change. */
+export function invalidateSiteData() {
+  cache = null;
+}
+
 export function useSiteData() {
-  const [data, setData] = useState<{ programs: Program[]; events: AcademyEvent[] } | null>(null);
+  const [data, setData] = useState<{ programs: SiteProgram[]; events: SiteEvent[] } | null>(null);
   useEffect(() => {
     let alive = true;
     loadSiteData().then((d) => alive && setData(d));
@@ -192,11 +237,49 @@ export function useSiteData() {
 }
 
 /** The next event with a date in the future, else one that is announced without a date. */
-export function nextEvent(events: AcademyEvent[]) {
+export function nextEvent(events: SiteEvent[]) {
   const now = Date.now();
   return (
     events.find((e) => e.starts_at && new Date(e.starts_at).getTime() > now) ??
     events.find((e) => !e.starts_at && e.date_label) ??
     null
+  );
+}
+
+/** "Register interest" goes to the event's own registration page when it has one, else our contact form. */
+export function RegisterLink({ event, className, children }: { event: SiteEvent; className: string; children?: ReactNode }) {
+  const href = safeHref(event.register_url);
+  const label = children ?? (href ? 'Register now' : 'Register interest');
+  if (href && !href.startsWith('/'))
+    return (
+      <a href={href} target="_blank" rel="noreferrer" className={className}>
+        {label}
+      </a>
+    );
+  return (
+    <Link to={href ?? `/contact?topic=${event.program_slug ?? 'enquiry'}&subject=${encodeURIComponent(event.title)}`} className={className}>
+      {label}
+    </Link>
+  );
+}
+
+/** A card's cover photo when one has been set in The Palace. Decorative: the card's heading names it. */
+export function Cover({ url, className = 'card-cover' }: { url: string | null | undefined; className?: string }) {
+  if (!url) return null;
+  return <img className={className} src={url} alt="" loading="lazy" decoding="async" />;
+}
+
+export function FounderPortrait() {
+  const f = useSite('founder');
+  if (f.portrait)
+    return (
+      <div className="portrait has-image">
+        <img src={f.portrait} alt={f.portraitAlt || f.name} loading="lazy" decoding="async" />
+      </div>
+    );
+  return (
+    <div className="portrait" aria-hidden="true">
+      <Crown size={56} />
+    </div>
   );
 }

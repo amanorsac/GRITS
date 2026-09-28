@@ -35,6 +35,8 @@ if the login field has no `@`, append `@members.gritandgrace.app`.
 | `POST /api/enrol` | parent | see `apps/web/worker/routes/enrol.ts` | `{ authorization_url, reference, join_code }` |
 | `POST /api/paystack/webhook` | Paystack HMAC | – | 200 |
 | `POST /api/waitlist` | – | `{ program, email }` | `{ ok: true }` |
+| `POST /api/admin/videos` | admin/owner | `{ title, lesson_id }` | `{ endpoint, videoId, libraryId, expires, signature }` — creates the Bunny video, sets `lessons.bunny_video_id` + `video_status='uploading'`; the browser then uploads over TUS with headers `AuthorizationSignature`, `AuthorizationExpire`, `VideoId`, `LibraryId`. `signature = sha256(libraryId + BUNNY_API_KEY + expires + videoId)`. 503 if Bunny is not connected |
+| `GET /api/admin/videos/:videoId` | admin/owner | – | `{ videoId, status: "uploading" \| "processing" \| "ready" \| "failed", progress, length_seconds }` — also writes `video_status` (and `duration_min`/`size_mb_480p` when empty) on the lesson |
 
 Posting rules enforced by the Worker: the Court is read-only 21:00–06:00 Africa/Accra (GMT); timed-out members
 cannot post; the automated moderation check runs on every write; first posts, flagged posts and anything the
