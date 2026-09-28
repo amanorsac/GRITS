@@ -5,9 +5,6 @@ export const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'https://grits.amanor
   .trim()
   .replace(/\/+$/, '');
 
-/** False when the build is missing its Supabase settings; the app then shows a "not configured" screen. */
-export const isConfigured = SUPABASE_URL.startsWith('https://') && SUPABASE_ANON_KEY.length > 20;
-
 /** Girls sign in with a username; the auth email is derived from it. */
 export const MEMBER_EMAIL_DOMAIN = 'members.gritandgrace.app';
 

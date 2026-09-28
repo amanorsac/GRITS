@@ -4,11 +4,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { brand } from '@/lib/theme';
 
+import { Button } from './Button';
+
 import { CrownMark } from './CrownMark';
 import { Txt } from './Txt';
 
 /** Shown instead of the app when the build is missing its Supabase settings. Never crashes. */
-export function NotConfigured({ onReady }: { onReady?: () => void }) {
+export function NotConfigured({ onReady, onRetry }: { onReady?: () => void; onRetry?: () => void }) {
   const insets = useSafeAreaInsets();
   useEffect(() => {
     onReady?.();
@@ -29,12 +31,12 @@ export function NotConfigured({ onReady }: { onReady?: () => void }) {
         Almost ready
       </Txt>
       <Txt color={brand.pinkSoft} center>
-        This copy of Grit & Grace has not been connected to the Academy yet, so there is nothing to show. Please try
-        again after the next update.
+        We could not reach the Academy just now. Check your connection and try again.
       </Txt>
       <Txt variant="meta" color={brand.pinkSoft} center>
-        For the team: set EXPO_PUBLIC_SUPABASE_ANON_KEY (see apps/mobile/README.md).
+        For the team: set SUPABASE_ANON_KEY on the grits Worker (see docs/LAUNCH.md).
       </Txt>
+      {onRetry && <Button label="Try again" variant="pill" onPress={onRetry} />}
     </View>
   );
 }

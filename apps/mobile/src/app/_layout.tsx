@@ -4,13 +4,13 @@ import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { iconFont } from '@/components/Icon';
 import { NotConfigured } from '@/components/NotConfigured';
 import { AuthProvider, useAuth } from '@/lib/auth';
-import { isConfigured } from '@/lib/env';
+import { initSupabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -26,20 +26,25 @@ export default function RootLayout() {
     ...iconFont,
   });
   const t = useTheme();
+  const [configured, setConfigured] = useState<boolean | null>(null);
+  const check = useCallback(() => {
+    initSupabase().then(setConfigured);
+  }, []);
+  useEffect(check, [check]);
 
-  if (!loaded && !error) return null;
+  if ((!loaded && !error) || configured === null) return null;
 
   const navTheme = t.scheme === 'dark' ? DarkTheme : DefaultTheme;
   return (
     <SafeAreaProvider>
       <ThemeProvider value={{ ...navTheme, colors: { ...navTheme.colors, background: t.bg, primary: t.accent, card: t.header, text: t.text, border: t.border } }}>
         <StatusBar style="light" />
-        {isConfigured ? (
+        {configured ? (
           <AuthProvider>
             <RootNavigator />
           </AuthProvider>
         ) : (
-          <NotConfigured onReady={() => SplashScreen.hideAsync()} />
+          <NotConfigured onReady={() => SplashScreen.hideAsync()} onRetry={check} />
         )}
       </ThemeProvider>
     </SafeAreaProvider>

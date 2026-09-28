@@ -2,7 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 import { AppState } from 'react-native';
 
-import { SUPABASE_ANON_KEY, SUPABASE_URL, isConfigured } from './env';
+import { API_URL, SUPABASE_ANON_KEY, SUPABASE_URL } from './env';
 
 /**
  * Session storage in the device keychain / keystore. SecureStore values are limited to ~2 KB,
@@ -41,30 +41,51 @@ const secureStorage = {
   },
 };
 
-/**
- * The client only exists when the build is configured. The root layout renders a
- * "not configured" screen instead of any screen that touches `supabase` otherwise.
- */
-export const supabase: SupabaseClient = isConfigured
-  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        storage: secureStorage,
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: false,
-      },
-    })
-  : (null as unknown as SupabaseClient);
+let client: SupabaseClient | null = null;
 
-// Only refresh tokens while the app is in the foreground.
-if (isConfigured) {
-  AppState.addEventListener('change', (state) => {
-    if (state === 'active') {
-      supabase.auth.startAutoRefresh();
-    } else {
-      supabase.auth.stopAutoRefresh();
+/**
+ * Everything imports `supabase`; it forwards to the real client once `initSupabase` has run.
+ * The root layout awaits that before rendering any screen that touches it.
+ */
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    if (!client) throw new Error('Supabase used before initSupabase()');
+    const value = Reflect.get(client, prop, client);
+    return typeof value === 'function' ? value.bind(client) : value;
+  },
+});
+
+/**
+ * The anon key is public. A build may carry it (EXPO_PUBLIC_SUPABASE_ANON_KEY); otherwise the
+ * app asks the Worker (/api/config), so setting the key once on the Worker configures web and app
+ * without a rebuild. Returns false when neither source has it yet.
+ */
+export async function initSupabase(): Promise<boolean> {
+  if (client) return true;
+  let url = SUPABASE_URL;
+  let key = SUPABASE_ANON_KEY;
+  if (!url || key.length < 20) {
+    try {
+      const res = await fetch(`${API_URL}/api/config`);
+      if (res.ok) {
+        const cfg = (await res.json()) as { supabaseUrl?: string; supabaseAnonKey?: string };
+        url = url || (cfg.supabaseUrl ?? '');
+        key = key.length >= 20 ? key : (cfg.supabaseAnonKey ?? '');
+      }
+    } catch {
+      // Offline or Worker unreachable — handled by the caller.
     }
+  }
+  if (!url.startsWith('https://') || key.length < 20) return false;
+  client = createClient(url, key, {
+    auth: { storage: secureStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false },
   });
+  // Only refresh tokens while the app is in the foreground.
+  AppState.addEventListener('change', (state) => {
+    if (state === 'active') client?.auth.startAutoRefresh();
+    else client?.auth.stopAutoRefresh();
+  });
+  return true;
 }
 
 /** Unwraps a Supabase result, throwing its error. */
