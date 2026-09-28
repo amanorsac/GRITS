@@ -57,6 +57,13 @@
           }
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "33d38182-73d2-470c-b59f-bdf791b45556"
+      }
+    },
+    "owner": "gritgraces-team"
   }
 }
