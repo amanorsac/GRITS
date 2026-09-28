@@ -1,0 +1,16 @@
+{
+  "name": "grits",
+  "private": true,
+  "description": "Grit & Grace Girls Academy platform — web (Cloudflare Worker + React) and member app (Expo, apps/mobile)",
+  "workspaces": ["apps/web"],
+  "scripts": {
+    "dev": "npm run dev -w web",
+    "build": "npm run build -w web",
+    "typecheck": "npm run typecheck -w web",
+    "deploy": "npm run build && wrangler deploy",
+    "worker:dev": "npm run build && wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^4.142.0"
+  }
+}

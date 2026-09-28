@@ -1,0 +1,35 @@
+// Cloudflare Worker "grits" — serves the React app (apps/web/dist) and the API (/api/*).
+// Connected to github.com/amanorsac/GRITS via Workers Builds: every push to main deploys.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "grits",
+  "main": "apps/web/worker/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "build": {
+    "command": "npm run build -w web"
+  },
+  "assets": {
+    "directory": "apps/web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "observability": { "enabled": true },
+  // Daily at 03:00 GMT — keeps the free Supabase project from pausing.
+  "triggers": { "crons": ["0 3 * * *"] },
+  "vars": {
+    "SUPABASE_URL": "https://ckwzixmsyfgonqiayltb.supabase.co",
+    // Empty = use the origin the request came in on. Set once the custom domain is live.
+    "APP_ORIGIN": "",
+    "MEMBER_EMAIL_DOMAIN": "members.gritandgrace.app",
+    "SAFEGUARDING_EMAIL": "grace@gritgracegirlsacademy.com",
+    "EMAIL_FROM": "Grit & Grace <hello@gritgracegirlsacademy.com>",
+    "BUNNY_LIBRARY_ID": "",
+    "JAAS_APP_ID": "",
+    "JAAS_KEY_ID": ""
+  }
+  // Secrets — set with `npx wrangler secret put <NAME>` or in the dashboard (Settings → Variables):
+  //   SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, PAYSTACK_SECRET_KEY, OPENAI_API_KEY,
+  //   BUNNY_TOKEN_KEY, JAAS_PRIVATE_KEY, RESEND_API_KEY
+}
