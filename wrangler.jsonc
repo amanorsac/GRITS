@@ -16,6 +16,8 @@
     "run_worker_first": ["/api/*"]
   },
   "observability": { "enabled": true },
+  // Keep variables set in the dashboard (e.g. Supabase keys) when a git push redeploys.
+  "keep_vars": true,
   // Daily at 03:00 GMT — keeps the free Supabase project from pausing.
   "triggers": { "crons": ["0 3 * * *"] },
   "vars": {
