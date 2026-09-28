@@ -42,3 +42,4 @@ yarn-error.*
 
 # local env (use .env.example as the template; set the anon key with `eas env:create` for builds)
 .env
+credentials.json
