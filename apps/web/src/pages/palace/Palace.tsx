@@ -29,12 +29,19 @@ export function PalaceLayout() {
   const nav: [string, string, string, number?, boolean?][] = [
     ['/palace', 'grid', 'Overview', undefined, true],
     ['/palace/members', 'users', 'Members'],
-    ['/palace/content', 'book', 'Content'],
+    ['/palace/content', 'book', 'Course studio'],
     ['/palace/moderation', 'court', 'Community', data?.awaiting_moderation],
     ['/palace/live', 'live', 'Live sessions'],
     ['/palace/commerce', 'money', 'Commerce'],
-    ['/palace/help', 'help', 'Talk to someone', data?.open_help],
+    ['/palace/help', 'help', 'Inbox', data?.open_help],
     ['/palace/people', 'shield', 'People & access'],
+  ];
+  const website: [string, string, string][] = [
+    ['/palace/website', 'home', 'Website'],
+    ['/palace/journal', 'journal', 'Journal'],
+    ['/palace/events', 'bell', 'Events'],
+    ['/palace/gallery', 'grid', 'Gallery'],
+    ['/palace/media', 'file', 'Media library'],
   ];
   return (
     <div className="shell">
@@ -48,8 +55,21 @@ export function PalaceLayout() {
             {!!count && <span className="count">{count}</span>}
           </NavLink>
         ))}
+        <div className="section">Public site</div>
+        {website.map(([to, icon, label]) => (
+          <NavLink key={to} to={to} className={({ isActive }) => `nav extra${isActive ? ' active' : ''}`}>
+            <Icon name={icon} /> <span>{label}</span>
+          </NavLink>
+        ))}
+        <div className="section">Preview</div>
         <Link to="/app" className="nav extra">
-          <Icon name="home" /> <span>Member view</span>
+          <Icon name="users" /> <span>Member view</span>
+        </Link>
+        <Link to="/gate" className="nav extra">
+          <Icon name="gate" /> <span>Parent view</span>
+        </Link>
+        <Link to="/" className="nav extra">
+          <Icon name="home" /> <span>Public site</span>
         </Link>
         <div className="foot">
           <div className="avatar gold">{initials(profile?.full_name || profile?.display_name || '')}</div>

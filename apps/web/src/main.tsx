@@ -9,6 +9,8 @@ import { initSupabase, supabaseConfigError } from './lib/supabase';
 import Home from './pages/site/Home';
 import { About, Contact, Events, Journal as SiteJournal, Programs } from './pages/site/Pages';
 import InnerCourtCourse from './pages/site/Course';
+import Gallery from './pages/site/Gallery';
+import Article from './pages/site/Article';
 import { Join, Login, SetPassword, VerifyCertificate } from './pages/Auth';
 import Enrol, { EnrolComplete } from './pages/Enrol';
 import Legal from './pages/Legal';
@@ -24,7 +26,13 @@ const PalaceLayout = lazy(() => palace().then((m) => ({ default: m.PalaceLayout 
 const PalaceOverview = lazy(() => palace().then((m) => ({ default: m.PalaceOverview })));
 const Moderation = lazy(() => palace().then((m) => ({ default: m.Moderation })));
 const Members = lazy(() => palace().then((m) => ({ default: m.Members })));
-const Content = lazy(() => palace().then((m) => ({ default: m.Content })));
+const Studio = lazy(() => import('./pages/palace/Studio'));
+const cms = () => import('./pages/palace/Cms');
+const WebsiteEditor = lazy(() => cms().then((m) => ({ default: m.WebsiteEditor })));
+const JournalEditor = lazy(() => cms().then((m) => ({ default: m.JournalEditor })));
+const GalleryEditor = lazy(() => cms().then((m) => ({ default: m.GalleryEditor })));
+const EventsEditor = lazy(() => cms().then((m) => ({ default: m.EventsEditor })));
+const MediaLibrary = lazy(() => cms().then((m) => ({ default: m.MediaLibrary })));
 const LiveAdmin = lazy(() => palace().then((m) => ({ default: m.LiveAdmin })));
 const Commerce = lazy(() => palace().then((m) => ({ default: m.Commerce })));
 const HelpQueue = lazy(() => palace().then((m) => ({ default: m.HelpQueue })));
@@ -44,6 +52,8 @@ const router = createBrowserRouter([
   { path: '/programs/inner-court', element: <InnerCourtCourse /> },
   { path: '/events', element: <Events /> },
   { path: '/journal', element: <SiteJournal /> },
+  { path: '/journal/:slug', element: <Article /> },
+  { path: '/gallery', element: <Gallery /> },
   { path: '/contact', element: <Contact /> },
   { path: '/login', element: <Login /> },
   { path: '/join', element: <Join /> },
@@ -57,7 +67,7 @@ const router = createBrowserRouter([
   {
     path: '/gate',
     element: (
-      <RequireRole roles={['parent']}>
+      <RequireRole roles={['parent', 'admin', 'owner']}>
         <Wait>
           <Gate />
         </Wait>
@@ -96,7 +106,12 @@ const router = createBrowserRouter([
       { index: true, element: <PalaceOverview /> },
       { path: 'moderation', element: <Moderation /> },
       { path: 'members', element: <Members /> },
-      { path: 'content', element: <Content /> },
+      { path: 'content', element: <Studio /> },
+      { path: 'website', element: <WebsiteEditor /> },
+      { path: 'journal', element: <JournalEditor /> },
+      { path: 'gallery', element: <GalleryEditor /> },
+      { path: 'events', element: <EventsEditor /> },
+      { path: 'media', element: <MediaLibrary /> },
       { path: 'live', element: <LiveAdmin /> },
       { path: 'commerce', element: <Commerce /> },
       { path: 'help', element: <HelpQueue /> },
