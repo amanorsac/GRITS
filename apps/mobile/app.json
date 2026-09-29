@@ -12,7 +12,7 @@
     "ios": {
       "bundleIdentifier": "com.gritandgrace.app",
       "buildNumber": "1",
-      "supportsTablet": false,
+      "supportsTablet": true,
       "config": {
         "usesNonExemptEncryption": false
       },

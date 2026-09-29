@@ -39,7 +39,7 @@ export function Screen({ title, eyebrow, subtitle, back, large, right, header, c
 
   const head = (
     <View style={[styles.header, { backgroundColor: t.header, paddingTop: insets.top + 8 }]}>
-      <View style={styles.headerRow}>
+      <View style={[styles.headerRow, styles.readable]}>
         {back ? (
           <PressableScale
             onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
@@ -70,14 +70,14 @@ export function Screen({ title, eyebrow, subtitle, back, large, right, header, c
         </View>
         {right}
       </View>
-      {header}
+      <View style={styles.readable}>{header}</View>
     </View>
   );
 
   const body = scroll ? (
     <ScrollView
       style={{ flex: 1 }}
-      contentContainerStyle={[styles.content, { paddingBottom: 32 + (back ? insets.bottom : 0) }]}
+      contentContainerStyle={[styles.content, styles.readable, { paddingBottom: 32 + (back ? insets.bottom : 0) }]}
       keyboardShouldPersistTaps="handled"
       refreshControl={
         onRefresh ? (
@@ -88,7 +88,7 @@ export function Screen({ title, eyebrow, subtitle, back, large, right, header, c
       {children}
     </ScrollView>
   ) : (
-    <View style={{ flex: 1 }}>{children}</View>
+    <View style={[{ flex: 1 }, styles.readable]}>{children}</View>
   );
 
   return (
@@ -107,4 +107,6 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   backBtn: { width: TAP, height: TAP, marginLeft: -12, alignItems: 'center', justifyContent: 'center' },
   content: { padding: 16, gap: 14 },
+  // iPad: keep a comfortable reading width instead of stretching edge to edge.
+  readable: { width: '100%', maxWidth: 760, alignSelf: 'center' },
 });
